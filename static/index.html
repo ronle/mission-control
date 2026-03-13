@@ -1,0 +1,3814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:          #0f1117;
+    --surface:     #1a1d27;
+    --surface2:    #21253300;
+    --surface3:    #2a2f3e;
+    --border:      #2e3347;
+    --border2:     #3d4460;
+    --text:        #f1f5f9;
+    --text-dim:    #b8c4d4;
+    --text-faint:  #7a8ba0;
+    --accent:      #4da6ff;
+    --accent-dim:  #1a3a5c;
+    --green:       #34d399;
+    --green-dim:   #0d2e1f;
+    --green-text:  #6ee7b7;
+    --amber:       #fbbf24;
+    --amber-dim:   #2d2008;
+    --amber-text:  #fcd34d;
+    --red:         #f87171;
+    --red-dim:     #2d1010;
+    --red-text:    #fca5a5;
+    --purple:      #a78bfa;
+    --purple-dim:  #1e1540;
+    --purple-text: #c4b5fd;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────────────── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 20px; }
+  .logo {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .tagline {
+    color: var(--text-faint);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--green-text); font-size: 11px;
+    font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .refresh-timer { color: var(--text-faint); font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── STATS BAR ───────────────────────────────────────────────────── */
+  .stats-bar { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .stat {
+    flex: 1; padding: 14px 24px;
+    border-right: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .stat:last-child { border-right: none; }
+  .stat:hover, .stat.active { background: var(--surface3); }
+  .stat-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .stat-count { font-size: 26px; font-weight: 700; line-height: 1; }
+  .stat-label { color: var(--text-dim); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: 500; margin-top: 2px; }
+
+  /* ── FILTER ROW ──────────────────────────────────────────────────── */
+  .filter-row {
+    display: flex; gap: 8px; padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    align-items: center; flex-wrap: wrap;
+    background: var(--bg);
+  }
+  .filter-label { color: var(--text-faint); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; margin-right: 4px; }
+  .filter-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-dim); font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 500;
+    padding: 5px 14px; border-radius: 20px;
+    cursor: pointer; letter-spacing: 0.5px;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--border2); color: var(--text); }
+  .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  /* ── MAIN LAYOUT ─────────────────────────────────────────────────── */
+  .main { padding: 24px 28px; display: flex; gap: 24px; align-items: flex-start; }
+  .projects-col {
+    flex: 1; min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  /* ── TILE CARD (grid view) ─────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    user-select: none;
+  }
+  .card::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 4px;
+  }
+  .card.status-active::before  { background: var(--green); }
+  .card.status-blocked::before { background: var(--red); }
+  .card.status-waiting::before { background: var(--amber); }
+  .card.status-parked::before  { background: var(--text-faint); }
+  .card:hover { border-color: var(--border2); box-shadow: 0 4px 20px rgba(0,0,0,0.4); transform: translateY(-2px); }
+
+  /* Drag states */
+  .card.dragging { opacity: 0.4; transform: scale(0.95); pointer-events: none; }
+  .card.drag-over-left { box-shadow: -3px 0 0 0 var(--accent); }
+  .card.drag-over-right { box-shadow: 3px 0 0 0 var(--accent); }
+
+  /* TILE HEADER */
+  .card-header {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 18px 18px 12px 22px;
+  }
+  .card-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .project-name { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: 0.2px; line-height: 1.3; }
+  .domain-tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap; font-weight: 600;
+  }
+  .domain-trading { background: var(--accent-dim); color: var(--accent); }
+  .domain-infra    { background: var(--purple-dim); color: var(--purple-text); }
+  .domain-hobby    { background: var(--amber-dim);  color: var(--amber-text); }
+  .domain-general  { background: var(--surface3);   color: var(--text-dim); }
+
+  .status-pill {
+    font-size: 10px; padding: 3px 10px; border-radius: 4px;
+    letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap; font-weight: 700;
+    align-self: flex-start;
+  }
+  .status-active  { background: var(--green-dim);  color: var(--green-text); }
+  .status-blocked { background: var(--red-dim);    color: var(--red-text); }
+  .status-waiting { background: var(--amber-dim);  color: var(--amber-text); }
+  .status-parked  { background: var(--surface3);   color: var(--text-dim); }
+  .status-unknown { background: var(--surface3);   color: var(--text-dim); }
+
+  .time-ago { color: var(--text-faint); font-size: 12px; white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
+
+  /* TILE BODY — compact info */
+  .tile-body {
+    flex: 1; padding: 0 18px 0 22px;
+    display: flex; flex-direction: column; gap: 8px;
+    overflow: hidden;
+  }
+  .tile-task {
+    font-size: 13px; line-height: 1.4; color: var(--accent);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .tile-task.blocked-text { color: var(--red-text); }
+  .tile-task.empty { color: var(--text-faint); }
+
+  /* TILE FOOTER */
+  .tile-footer {
+    padding: 10px 18px 14px 22px;
+    display: flex; align-items: center; gap: 8px;
+    margin-top: auto;
+  }
+  .backlog-badge {
+    background: var(--amber-dim); color: var(--amber-text);
+    font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600;
+  }
+  .agent-running-badge {
+    background: var(--green-dim); color: var(--green-text);
+    font-size: 9px; padding: 3px 8px; border-radius: 4px;
+    letter-spacing: 0.8px; text-transform: uppercase; font-weight: 700;
+    animation: pulse 2s infinite;
+  }
+  .agent-image-previews {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;
+  }
+  .agent-image-preview {
+    position: relative; width: 64px; height: 64px; border-radius: 5px;
+    overflow: hidden; border: 1px solid var(--border); background: var(--surface3);
+    flex-shrink: 0;
+  }
+  .agent-image-preview img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+
+  /* ── MODAL ──────────────────────────────────────────────────────── */
+  /* ── MULTI-MODAL LAYER ─────────────────────────────────────────── */
+  .modal-layer {
+    position: fixed; inset: 0;
+    z-index: 300;
+    pointer-events: none;
+  }
+  .modal-window {
+    position: absolute;
+    pointer-events: auto;
+    filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+  }
+  .modal-window.minimized { display: none; }
+  .modal-window.focused .modal-content {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-dim);
+  }
+  .modal-content {
+    background: var(--surface);
+    width: 700px;
+    height: 80vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    resize: both;
+    min-width: 380px;
+    min-height: 300px;
+    position: relative;
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+
+  .modal-window-controls {
+    position: absolute; top: 8px; right: 8px; z-index: 11;
+    display: flex; gap: 4px;
+  }
+  .modal-minimize, .modal-close {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .modal-minimize:hover { background: var(--amber-dim); color: var(--amber-text); border-color: var(--amber); }
+  .modal-close:hover { background: var(--red-dim); color: var(--red-text); border-color: var(--red); }
+
+  /* ── MINIMIZED TRAY ──────────────────────────────────────────── */
+  .minimized-tray {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 180;
+    display: flex; gap: 6px;
+    padding: 6px 12px;
+    pointer-events: none;
+  }
+  .minimized-tray:empty { display: none; }
+  .minimized-chip {
+    pointer-events: auto;
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    font-size: 12px; color: var(--text);
+    transition: background 0.15s;
+    max-width: 220px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .minimized-chip:hover { background: var(--surface3); border-color: var(--border2); }
+  .minimized-chip .chip-status {
+    width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
+  }
+  .minimized-chip .chip-close {
+    margin-left: 4px; font-size: 14px;
+    color: var(--text-faint); cursor: pointer;
+  }
+  .minimized-chip .chip-close:hover { color: var(--red); }
+
+  .modal-header {
+    padding: 16px 24px 12px 28px;
+    border-bottom: 1px solid var(--border);
+    background: #1e2230;
+    cursor: grab;
+    border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
+  }
+  .modal-header.dragging { cursor: grabbing; }
+  .modal-header::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 4px;
+    border-radius: 12px 0 0 0;
+  }
+  .modal-header.status-active::before  { background: var(--green); }
+  .modal-header.status-blocked::before { background: var(--red); }
+  .modal-header.status-waiting::before { background: var(--amber); }
+  .modal-header.status-parked::before  { background: var(--text-faint); }
+
+  /* CARD SUMMARY (modal) */
+  .card-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .summary-item { padding: 12px 18px 14px 22px; border-right: 1px solid var(--border); }
+  .summary-item:last-child { border-right: none; }
+  .summary-label {
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-faint); margin-bottom: 5px; font-weight: 600;
+  }
+  .summary-value {
+    font-size: 13px; color: var(--text); line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .summary-value.current-task { color: var(--accent); }
+  .summary-value.blocked-text { color: var(--red-text); }
+  .summary-value.next-text    { color: var(--green-text); }
+
+  /* CARD BODY (modal) */
+  .card-body { border-top: 1px solid var(--border); }
+  .card-section { padding: 16px 18px 16px 22px; border-bottom: 1px solid var(--border); }
+  .card-section:last-child { border-bottom: none; }
+  .description { color: var(--text-dim); font-size: 13px; line-height: 1.6; }
+  .section-title {
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-faint); margin-bottom: 10px; font-weight: 600;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  /* MODAL TABS */
+  .modal-tab-bar {
+    display: flex; gap: 0; border-bottom: 1px solid var(--border);
+    background: #1e2230; padding: 0 22px; flex-shrink: 0;
+  }
+  .modal-tab {
+    padding: 9px 16px 7px; cursor: pointer;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
+    text-transform: uppercase; color: var(--text-faint);
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap; user-select: none;
+  }
+  .modal-tab:hover { color: var(--text-dim); }
+  .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .modal-tab .tab-badge {
+    font-size: 10px; background: var(--accent-dim); color: var(--accent);
+    padding: 1px 6px; border-radius: 8px; margin-left: 6px;
+  }
+  .modal-tab-search {
+    margin-left: auto; display: flex; align-items: center;
+    padding: 4px 0; position: relative;
+  }
+  .modal-tab-search input {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text-dim);
+    font-family: 'Inter', sans-serif; font-size: 11px;
+    padding: 4px 22px 4px 8px; border-radius: 4px; outline: none;
+    width: 150px; transition: border-color 0.15s, width 0.2s;
+  }
+  .modal-tab-search input:focus { border-color: var(--accent); color: var(--text); width: 200px; }
+  .modal-tab-search input::placeholder { color: var(--text-faint); font-style: italic; }
+  .modal-tab-search .search-clear {
+    position: absolute; right: 6px; color: var(--text-faint); cursor: pointer;
+    font-size: 12px; line-height: 1; padding: 2px; user-select: none;
+  }
+  .modal-tab-search .search-clear:hover { color: var(--text); }
+  .modal-scroll-body {
+    flex: 1; overflow-y: auto; min-height: 0; overscroll-behavior: contain;
+  }
+  .modal-scroll-body::-webkit-scrollbar { width: 6px; }
+  .modal-scroll-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  .modal-tab-content { display: none; }
+  .modal-tab-content.active { display: block; }
+
+  /* LOG ENTRIES */
+  .log-entries { display: flex; flex-direction: column; gap: 5px; }
+  .log-entry {
+    display: flex; gap: 12px; align-items: baseline;
+    padding: 7px 10px; background: var(--bg);
+    border-radius: 4px; border-left: 2px solid var(--border2);
+  }
+  .log-ts  { color: var(--text-faint); font-size: 11px; white-space: nowrap; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
+  .log-msg { color: var(--text-dim); font-size: 13px; line-height: 1.4; }
+
+  /* BACKLOG */
+  .backlog-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+  .backlog-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 10px; background: var(--bg);
+    border-radius: 4px; border-left: 2px solid var(--border2);
+  }
+  .backlog-item.done { opacity: 0.45; }
+  .backlog-item.done .backlog-text { text-decoration: line-through; }
+  .backlog-item.priority-high   { border-left-color: var(--red); }
+  .backlog-item.priority-normal { border-left-color: var(--border2); }
+  .backlog-item.priority-low    { border-left-color: var(--text-faint); opacity: 0.7; }
+
+  .backlog-check {
+    width: 16px; height: 16px; border: 1.5px solid var(--border2);
+    border-radius: 3px; cursor: pointer; flex-shrink: 0; margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; background: none; color: var(--green-text); font-size: 11px;
+  }
+  .backlog-check:hover { border-color: var(--green); }
+  .backlog-item.done .backlog-check { background: var(--green-dim); border-color: var(--green); }
+
+  .backlog-text {
+    flex: 1; font-size: 13px; color: var(--text); line-height: 1.5; word-break: break-word;
+  }
+  .backlog-text[contenteditable="true" spellcheck="true"] {
+    outline: 1px solid var(--accent); border-radius: 3px;
+    padding: 1px 4px; background: var(--surface);
+  }
+  .backlog-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+  .priority-badge {
+    font-size: 9px; padding: 2px 7px; border-radius: 3px;
+    letter-spacing: 0.8px; text-transform: uppercase; cursor: pointer;
+    font-weight: 600; transition: opacity 0.15s;
+  }
+  .priority-badge:hover { opacity: 0.8; }
+  .priority-high   { background: var(--red-dim);   color: var(--red-text); }
+  .priority-normal { background: var(--surface3);  color: var(--text-dim); }
+  .priority-low    { background: var(--surface3);  color: var(--text-faint); }
+
+  .backlog-del {
+    background: none; border: none; color: var(--text-faint);
+    cursor: pointer; font-size: 14px; padding: 0 2px; opacity: 0;
+    transition: opacity 0.15s, color 0.15s; line-height: 1;
+  }
+  .backlog-item:hover .backlog-del { opacity: 1; }
+  .backlog-del:hover { color: var(--red); }
+  .backlog-dispatch {
+    background: none; border: none; color: var(--text-faint);
+    cursor: pointer; font-size: 11px; padding: 0 2px; opacity: 0;
+    transition: opacity 0.15s, color 0.15s; line-height: 1;
+  }
+  .backlog-item:hover .backlog-dispatch { opacity: 1; }
+  .backlog-dispatch:hover { color: var(--green-text); }
+  .backlog-source {
+    font-size: 9px; color: var(--text-faint); padding: 1px 5px;
+    border: 1px solid var(--border); border-radius: 3px; font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ADD FORM */
+  .backlog-add { display: flex; flex-direction: column; gap: 8px; }
+  .backlog-input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px;
+    padding: 7px 12px; border-radius: 5px; outline: none; transition: border-color 0.15s;
+    resize: vertical; min-height: 38px; max-height: 200px; line-height: 1.5;
+  }
+  .backlog-input:focus { border-color: var(--accent); }
+  .backlog-input::placeholder { color: var(--text-faint); }
+  .backlog-input.drag-over { border-color: var(--accent); background: var(--accent-dim); }
+
+  .create-previews {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .create-previews:empty { display: none; }
+  .create-preview-item {
+    position: relative; width: 64px; height: 64px; border-radius: 5px;
+    overflow: hidden; border: 1px solid var(--border); background: var(--surface3);
+    flex-shrink: 0;
+  }
+  .create-preview-item img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  .create-preview-item .file-icon {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    font-size: 24px; color: var(--text-dim);
+  }
+  .create-preview-item .file-name {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    font-size: 8px; color: var(--text); background: rgba(0,0,0,0.7);
+    padding: 1px 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .create-preview-remove {
+    position: absolute; top: 2px; right: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(0,0,0,0.7); border: none; color: var(--text);
+    cursor: pointer; font-size: 10px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .create-preview-item:hover .create-preview-remove { opacity: 1; }
+  .priority-select {
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text-dim); font-family: 'Inter', sans-serif;
+    font-size: 12px; padding: 7px 8px; border-radius: 5px; cursor: pointer; outline: none;
+  }
+  .btn-add {
+    background: var(--accent-dim); border: 1px solid var(--accent);
+    color: var(--accent); font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600; padding: 7px 16px; border-radius: 5px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-add:hover { background: var(--accent); color: var(--bg); }
+
+  .toggle-done {
+    background: none; border: 1px solid var(--border); color: var(--text-faint);
+    font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+    padding: 3px 10px; border-radius: 4px; cursor: pointer; transition: all 0.15s;
+  }
+  .toggle-done:hover { color: var(--text-dim); border-color: var(--border2); }
+
+  .btn-undo {
+    background: none; border: 1px solid var(--border); color: var(--text-faint);
+    font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+    padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: all 0.15s;
+    margin-right: 4px;
+  }
+  .btn-undo:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* FEED */
+  .feed-col { width: 380px; flex-shrink: 0; position: sticky; top: 90px; z-index: 201; }
+  .feed-header {
+    font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-dim); font-weight: 600;
+    margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  }
+  .feed-entries {
+    display: flex; flex-direction: column; gap: 6px;
+    max-height: calc(100vh - 180px); overflow-y: auto;
+  }
+  .feed-entries::-webkit-scrollbar { width: 4px; }
+  .feed-entries::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .feed-entry {
+    padding: 12px 14px; background: var(--surface);
+    border-radius: 5px; border-left: 3px solid var(--border);
+    transition: border-color 0.15s;
+  }
+  .feed-entry:hover { border-left-color: var(--accent); }
+  .feed-entry-project { font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
+  .feed-entry-msg { color: var(--text-dim); font-size: 14px; line-height: 1.5; }
+  .feed-entry-ts  { color: var(--text-faint); font-size: 12px; margin-top: 5px; font-family: 'JetBrains Mono', monospace; }
+
+  .loading { color: var(--text-faint); text-align: center; padding: 48px; font-size: 13px; letter-spacing: 1px; grid-column: 1 / -1; }
+
+  @media (max-width: 960px) {
+    .feed-col { display: none; }
+    .card-summary { grid-template-columns: 1fr; }
+    .summary-item { border-right: none; border-bottom: 1px solid var(--border); }
+    .summary-item:last-child { border-bottom: none; }
+  }
+
+  /* ATTACHMENTS */
+  .att-btn {
+    background: none; border: 1px solid var(--border); color: var(--text-faint);
+    cursor: pointer; font-size: 13px; padding: 2px 7px; border-radius: 4px;
+    transition: all 0.15s; line-height: 1; flex-shrink: 0;
+  }
+  .att-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .att-btn.has-atts { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+  .att-panel {
+    display: none; margin-top: 8px; padding: 10px 12px;
+    background: var(--bg); border-radius: 5px;
+    border: 1px solid var(--border); border-left: 2px solid var(--accent);
+  }
+  .att-panel.open { display: block; }
+
+  .att-drop-zone {
+    border: 1.5px dashed var(--border2); border-radius: 5px;
+    padding: 14px; text-align: center; cursor: pointer;
+    color: var(--text-faint); font-size: 12px; transition: all 0.15s;
+    margin-bottom: 8px;
+  }
+  .att-drop-zone:hover, .att-drop-zone.drag-over {
+    border-color: var(--accent); color: var(--accent); background: var(--accent-dim);
+  }
+  .att-drop-zone input[type=file] { display: none; }
+
+  .att-list { display: flex; flex-direction: column; gap: 5px; }
+  .att-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; background: var(--surface); border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .att-thumb {
+    width: 36px; height: 36px; border-radius: 3px; object-fit: cover;
+    flex-shrink: 0; background: var(--surface3);
+  }
+  .att-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .att-info { flex: 1; min-width: 0; }
+  .att-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .att-size { font-size: 11px; color: var(--text-faint); }
+  .att-open {
+    background: none; border: 1px solid var(--border); color: var(--text-dim);
+    font-size: 11px; padding: 3px 8px; border-radius: 3px; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+  }
+  .att-open:hover { border-color: var(--accent); color: var(--accent); }
+  .att-del {
+    background: none; border: none; color: var(--text-faint);
+    cursor: pointer; font-size: 14px; padding: 0 2px; opacity: 0;
+    transition: opacity 0.15s, color 0.15s; flex-shrink: 0; line-height: 1;
+  }
+  .att-item:hover .att-del { opacity: 1; }
+  .att-del:hover { color: var(--red); }
+  .att-uploading { color: var(--text-faint); font-size: 12px; text-align: center; padding: 6px; }
+
+  /* ── AGENT PANEL ─────────────────────────────────────────────── */
+  .agent-panel { padding: 16px 18px 16px 22px; border-bottom: 1px solid var(--border); }
+  .agent-panel-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    user-select: none;
+  }
+  .agent-panel-header .section-title { margin-bottom: 0; flex: 1; }
+  .agent-status-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .agent-status-dot.idle       { background: var(--text-faint); }
+  .agent-status-dot.running    { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  .agent-status-dot.completed  { background: var(--accent); }
+  .agent-status-dot.error      { background: var(--red); }
+  .agent-status-dot.stopped    { background: var(--amber); }
+  .agent-status-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;
+  }
+  .agent-status-label.idle      { color: var(--text-faint); }
+  .agent-status-label.running   { color: var(--green-text); }
+  .agent-status-label.completed { color: var(--accent); }
+  .agent-status-label.error     { color: var(--red-text); }
+  .agent-status-label.stopped   { color: var(--amber-text); }
+
+  .agent-activity {
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    color: var(--amber-text); opacity: 0.85; margin-left: 6px;
+    max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    animation: activity-fade 1.5s ease-in-out infinite;
+  }
+  @keyframes activity-fade { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+  /* Tab bar */
+  .agent-tab-bar {
+    display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap;
+    align-items: center;
+  }
+  .agent-tab {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 5px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 11px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s; max-width: 180px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .agent-tab:hover { border-color: var(--border2); color: var(--text); }
+  .agent-tab.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .agent-tab .agent-status-dot { width: 6px; height: 6px; flex-shrink: 0; }
+  .agent-tab-label {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .agent-tab-close {
+    background: none; border: none; color: var(--text-faint);
+    cursor: pointer; font-size: 11px; padding: 0 2px; line-height: 1;
+    opacity: 0; transition: opacity 0.15s, color 0.15s; flex-shrink: 0;
+    margin-left: 2px;
+  }
+  .agent-tab:hover .agent-tab-close { opacity: 1; }
+  .agent-tab-close:hover { color: var(--red); }
+  .agent-tab-new {
+    padding: 5px 10px; border-radius: 5px;
+    background: none; border: 1px dashed var(--border);
+    color: var(--text-faint); font-size: 11px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .agent-tab-new:hover { border-color: var(--accent); color: var(--accent); }
+
+  .agent-input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .agent-task-input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px;
+    padding: 8px 12px; border-radius: 5px; outline: none; resize: vertical;
+    min-height: 38px; max-height: 120px; line-height: 1.5;
+    transition: border-color 0.15s;
+  }
+  .agent-task-input:focus { border-color: var(--accent); }
+  .agent-task-input::placeholder { color: var(--text-faint); }
+
+  .btn-dispatch {
+    background: var(--green-dim); border: 1px solid var(--green);
+    color: var(--green-text); font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600; padding: 8px 16px; border-radius: 5px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+  }
+  .btn-dispatch:hover { background: var(--green); color: var(--bg); }
+  .btn-dispatch:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-stop {
+    background: var(--red-dim); border: 1px solid var(--red);
+    color: var(--red-text); font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600; padding: 8px 16px; border-radius: 5px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-stop:hover { background: var(--red); color: var(--bg); }
+
+  .agent-chat {
+    background: #0a0c10; border: 1px solid var(--border); border-radius: 6px;
+    display: flex; flex-direction: column; height: 450px; margin-bottom: 10px;
+    min-height: 120px; max-height: 80vh; position: relative;
+  }
+  .agent-chat-resize {
+    position: absolute; bottom: -4px; left: 0; right: 0; height: 8px;
+    cursor: ns-resize; z-index: 5;
+  }
+  .agent-chat-resize::after {
+    content: ''; position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px; height: 3px; border-radius: 2px;
+    background: var(--border); transition: background 0.15s;
+  }
+  .agent-chat-resize:hover::after { background: var(--accent); }
+  .agent-output {
+    flex: 1; overflow-y: auto; overflow-x: hidden; padding: 12px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6;
+    color: #e2e8f0; white-space: pre-wrap; word-break: break-word; min-width: 0;
+  }
+  .agent-output:empty { display: none; }
+  .agent-chat-input {
+    flex-shrink: 0; border-top: 1px solid var(--border); padding: 8px 10px;
+  }
+  .agent-chat-input-row { display: flex; gap: 8px; }
+  .agent-chat-input-row .agent-task-input {
+    background: transparent; border-color: var(--border2);
+  }
+  .agent-chat-input .agent-image-previews { margin-bottom: 6px; }
+  .agent-output::-webkit-scrollbar { width: 5px; }
+  .agent-output::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  .agent-output .agent-line { padding: 1px 0; }
+  .agent-output .agent-line-tool { color: var(--amber-text); }
+  .agent-output .agent-line-status { color: var(--green-text); font-weight: 600; }
+  .agent-output .agent-line-error { color: var(--red-text); }
+  .agent-output .agent-line-followup { color: var(--accent); font-weight: 600; }
+  .agent-output .agent-line-queued { color: var(--yellow, #e5c07b); font-weight: 600; font-style: italic; }
+  .agent-output .agent-line-prompt, .ac-session-output .agent-line-prompt {
+    color: var(--text); font-weight: 500; background: #1a2234;
+    margin: 6px -8px; padding: 8px 10px; border-radius: 5px; border-left: 3px solid var(--accent);
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Rich text formatting for agent output */
+  .agent-output .hl-code {
+    background: #1e2233; color: #93c5fd; padding: 1px 5px; border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.95em;
+  }
+  .agent-output .hl-path { color: #60a5fa; }
+  .agent-output .hl-bold { color: #cbd5e1; font-weight: normal; background: #171c2a; padding: 1px 5px; border-radius: 3px; }
+  .agent-output .hl-h { color: #93c5fd; font-size: 1.05em; }
+  .agent-output .hl-bullet { color: var(--accent); font-weight: 600; }
+  .agent-output .hl-num { color: #c4b5fd; }
+  .agent-output .hl-url { color: #60a5fa; text-decoration: underline; text-decoration-style: dotted; }
+  .agent-output .hl-codeblock {
+    display: block; background: #0d1017; border: 1px solid var(--border); border-radius: 4px;
+    padding: 8px 10px; margin: 4px 0; color: #a5d6ff; overflow-x: auto;
+  }
+  .agent-output .hl-table {
+    display: block; background: #0d1117; border: 1px solid var(--border); border-radius: 4px;
+    padding: 2px 0; margin: 4px 0; overflow-x: auto; max-width: 100%;
+  }
+  .agent-output .hl-table table {
+    border-collapse: collapse; font-size: inherit; line-height: 1.4;
+  }
+  .agent-output .hl-table th {
+    color: #93c5fd; text-align: left;
+    padding: 4px 12px; border-bottom: 2px solid var(--border2); white-space: nowrap;
+  }
+  .agent-output .hl-table td {
+    color: #c9d1d9; padding: 3px 12px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .agent-output .hl-table tr:last-child td { border-bottom: none; }
+  .agent-output .hl-table-pre {
+    display: block; background: #0d1117; border: 1px solid var(--border); border-radius: 4px;
+    padding: 6px 10px; margin: 4px 0; color: #c9d1d9; overflow-x: auto;
+    word-break: normal; white-space: pre; line-height: 1.4; max-width: 100%;
+  }
+  .agent-output .hl-table-pre .table-pipe { color: #3b82f6; }
+  .agent-output .hl-table-pre .table-border { color: #475569; }
+
+  /* Plan Viewer modal */
+  .plan-viewer-content { width: 1000px; height: 85vh; }
+  .plan-viewer-header {
+    padding: 16px 24px 12px 28px; border-bottom: 1px solid var(--border);
+    background: #1e2230; cursor: grab; border-radius: 12px 12px 0 0; flex-shrink: 0;
+  }
+  .plan-viewer-header.dragging { cursor: grabbing; }
+  .plan-viewer-body {
+    flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 28px;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    line-height: 1.6; color: #e2e8f0; white-space: pre-wrap; word-break: break-word; min-width: 0;
+  }
+  .plan-viewer-body .agent-line { padding: 1px 0; }
+  .plan-viewer-body .agent-line-tool { color: var(--amber-text); }
+  .plan-viewer-body .agent-line-status { color: var(--green-text); font-weight: 600; }
+  .plan-viewer-body .agent-line-error { color: var(--red-text); }
+  .plan-viewer-body .agent-line-prompt { color: var(--accent); font-weight: 600; font-style: italic; border-left: 3px solid var(--accent-dim); padding-left: 10px; margin: 6px 0; }
+  .plan-viewer-body .hl-code { background: #1e2233; color: #93c5fd; padding: 1px 5px; border-radius: 3px; font-size: 0.95em; }
+  .plan-viewer-body .hl-path { color: #60a5fa; }
+  .plan-viewer-body .hl-bold { color: #cbd5e1; font-weight: normal; background: #171c2a; padding: 1px 5px; border-radius: 3px; }
+  .plan-viewer-body .hl-h { color: #93c5fd; font-size: 1.05em; }
+  .plan-viewer-body .hl-bullet { color: var(--accent); font-weight: 600; }
+  .plan-viewer-body .hl-num { color: #c4b5fd; }
+  .plan-viewer-body .hl-url { color: #60a5fa; text-decoration: underline; text-decoration-style: dotted; }
+  .plan-viewer-body .hl-codeblock { display: block; background: #0d1017; border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; margin: 4px 0; color: #a5d6ff; overflow-x: auto; }
+  .plan-viewer-body .hl-table { display: block; background: #0d1117; border: 1px solid var(--border); border-radius: 4px; padding: 2px 0; margin: 4px 0; overflow-x: auto; max-width: 100%; }
+  .plan-viewer-body .hl-table table { border-collapse: collapse; font-size: inherit; line-height: 1.4; }
+  .plan-viewer-body .hl-table th { color: #93c5fd; text-align: left; padding: 4px 12px; border-bottom: 2px solid var(--border2); white-space: nowrap; }
+  .plan-viewer-body .hl-table td { color: #c9d1d9; padding: 3px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .plan-viewer-body .hl-table tr:last-child td { border-bottom: none; }
+  .plan-viewer-body .hl-table-pre { display: block; background: #0d1117; border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; margin: 4px 0; color: #c9d1d9; overflow-x: auto; word-break: normal; white-space: pre; line-height: 1.4; max-width: 100%; }
+  .plan-viewer-body .hl-table-pre .table-pipe { color: #3b82f6; }
+  .plan-viewer-body .hl-table-pre .table-border { color: #475569; }
+  .plan-show-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; margin: 10px 0;
+    background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.4);
+    color: #c4b5fd; border-radius: 8px;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    font-family: 'Inter', sans-serif; transition: all 0.15s;
+  }
+  .plan-show-btn:hover { background: rgba(139,92,246,0.25); border-color: #8b5cf6; color: #e9e5ff; }
+  .plan-hidden-block { display: none; }
+  .btn-popout {
+    background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text-dim); padding: 3px 10px; border-radius: 5px;
+    cursor: pointer; font-size: 11px; font-weight: 600;
+    font-family: 'Inter', sans-serif; transition: all 0.15s; margin-left: auto;
+  }
+  .btn-popout:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-plan-file {
+    background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.4);
+    color: #c4b5fd; padding: 3px 10px; border-radius: 5px;
+    cursor: pointer; font-size: 11px; font-weight: 600;
+    font-family: 'Inter', sans-serif; transition: all 0.15s;
+  }
+  .btn-plan-file:hover { background: rgba(139,92,246,0.25); border-color: #8b5cf6; color: #e9e5ff; }
+
+  /* Console uses same highlighting */
+  .ac-session-output .hl-code { background: #1e2233; color: #93c5fd; padding: 1px 5px; border-radius: 3px; font-size: 0.95em; }
+  .ac-session-output .hl-path { color: #60a5fa; }
+  .ac-session-output .hl-bold { color: #f1f5f9; }
+  .ac-session-output .hl-h { color: #93c5fd; }
+  .ac-session-output .hl-bullet { color: var(--accent); }
+  .ac-session-output .hl-num { color: #c4b5fd; }
+  .ac-session-output .hl-codeblock { display: block; background: #0d1017; border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px; margin: 4px 0; color: #a5d6ff; overflow-x: auto; }
+  .ac-session-output .hl-table {
+    display: block; background: #0d1117; border: 1px solid var(--border); border-radius: 4px;
+    padding: 2px 0; margin: 4px 0; overflow-x: auto; max-width: 100%;
+  }
+  .ac-session-output .hl-table table {
+    border-collapse: collapse; font-size: inherit; line-height: 1.4;
+  }
+  .ac-session-output .hl-table th {
+    color: #93c5fd; text-align: left;
+    padding: 4px 12px; border-bottom: 2px solid var(--border2); white-space: nowrap;
+  }
+  .ac-session-output .hl-table td {
+    color: #c9d1d9; padding: 3px 12px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  .ac-session-output .hl-table tr:last-child td { border-bottom: none; }
+  .ac-session-output .hl-table-pre {
+    display: block; background: #0d1117; border: 1px solid var(--border); border-radius: 4px;
+    padding: 6px 10px; margin: 4px 0; color: #c9d1d9; overflow-x: auto;
+    word-break: normal; white-space: pre; line-height: 1.4; max-width: 100%;
+  }
+  .ac-session-output .hl-table-pre .table-pipe { color: #3b82f6; }
+  .ac-session-output .hl-table-pre .table-border { color: #475569; }
+
+  /* legacy .agent-followup-row replaced by .agent-chat-input */
+
+  .agent-disabled {
+    color: var(--text-faint); font-size: 12px; padding: 8px 0;
+    font-style: italic;
+  }
+
+  /* ── AGENT LOG PANEL ──────────────────────────────────────────── */
+  .agent-log-panel { padding: 16px 18px 16px 22px; border-bottom: 1px solid var(--border); }
+  .agent-log-toggle {
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; user-select: none;
+  }
+  .agent-log-toggle .section-title { margin-bottom: 0; }
+  .agent-log-chevron { color: var(--text-faint); font-size: 12px; transition: transform 0.2s; }
+  .agent-log-chevron.open { transform: rotate(90deg); }
+  .agent-log-body { display: none; margin-top: 12px; }
+  .agent-log-body.open { display: block; }
+  .agent-log-entries { display: flex; flex-direction: column; gap: 8px; }
+  .agent-log-entry {
+    padding: 10px 12px; background: var(--bg); border-radius: 5px;
+    border-left: 3px solid var(--border2);
+  }
+  .agent-log-entry.status-completed { border-left-color: var(--green); }
+  .agent-log-entry.status-error { border-left-color: var(--red); }
+  .agent-log-entry.status-stopped { border-left-color: var(--amber); }
+  .agent-log-task {
+    font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .agent-log-task .agent-status-dot { width: 6px; height: 6px; }
+  .agent-log-summary {
+    font-size: 12px; color: var(--text-dim); line-height: 1.5;
+    white-space: pre-wrap; word-break: break-word;
+    max-height: 120px; overflow-y: auto;
+  }
+  .agent-log-summary::-webkit-scrollbar { width: 4px; }
+  .agent-log-summary::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .agent-log-ts {
+    font-size: 11px; color: var(--text-faint); margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .agent-log-session-id {
+    font-size: 10px; color: var(--text-faint); margin-top: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .agent-log-session-id code {
+    background: var(--bg2); padding: 1px 5px; border-radius: 3px;
+    font-size: 10px; user-select: all; cursor: pointer;
+  }
+  .agent-log-session-id .copy-sid {
+    cursor: pointer; color: var(--text-faint); font-size: 11px;
+    opacity: 0.6; transition: opacity 0.15s;
+  }
+  .agent-log-session-id .copy-sid:hover { opacity: 1; color: var(--accent); }
+  .agent-log-empty {
+    color: var(--text-faint); font-size: 12px; font-style: italic; padding: 4px 0;
+  }
+  .agent-log-continue-btn {
+    background: var(--green-dim); border: 1px solid var(--green);
+    color: var(--green-text); font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+    cursor: pointer; transition: all 0.15s; margin-left: auto; white-space: nowrap;
+  }
+  .agent-log-continue-btn:hover { background: var(--green); color: var(--bg); }
+  .agent-log-continue-input { display: none; margin-top: 8px; }
+  .agent-log-continue-input.open { display: flex; gap: 6px; align-items: flex-start; }
+  .agent-log-continue-input textarea {
+    flex: 1; background: var(--bg2); border: 1px solid var(--border2);
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 12px;
+    padding: 6px 8px; border-radius: 4px; resize: vertical; min-height: 32px;
+  }
+  .agent-log-continue-input textarea:focus { border-color: var(--accent); outline: none; }
+  .agent-log-continue-input .btn-send {
+    background: var(--green-dim); border: 1px solid var(--green);
+    color: var(--green-text); font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 4px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .agent-log-continue-input .btn-send:hover { background: var(--green); color: var(--bg); }
+
+  /* ── RULES PANEL ─────────────────────────────────────────────── */
+  .rules-panel { padding: 16px 18px 16px 22px; border-bottom: 1px solid var(--border); }
+  .rules-toggle {
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; user-select: none;
+  }
+  .rules-toggle .section-title { margin-bottom: 0; }
+  .rules-chevron { color: var(--text-faint); font-size: 12px; transition: transform 0.2s; }
+  .rules-chevron.open { transform: rotate(90deg); }
+  .rules-body { display: none; margin-top: 12px; }
+  .rules-body.open { display: block; }
+  .rules-textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    padding: 10px 12px; border-radius: 5px; outline: none; resize: vertical;
+    min-height: 120px; max-height: 400px; line-height: 1.5;
+    transition: border-color 0.15s;
+  }
+  .rules-textarea:focus { border-color: var(--accent); }
+  .rules-label {
+    font-size: 11px; color: var(--text-faint); text-transform: uppercase;
+    letter-spacing: 0.8px; font-weight: 600; margin-bottom: 6px; margin-top: 10px;
+  }
+  .rules-label:first-child { margin-top: 0; }
+  .btn-save-rules {
+    background: var(--accent-dim); border: 1px solid var(--accent);
+    color: var(--accent); font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 5px;
+    cursor: pointer; transition: all 0.15s; margin-top: 8px;
+  }
+  .btn-save-rules:hover { background: var(--accent); color: var(--bg); }
+  .rules-saved {
+    color: var(--green-text); font-size: 11px; margin-left: 8px;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .rules-saved.show { opacity: 1; }
+
+  /* ── PATH EDITOR ────────────────────────────────────────────── */
+  .path-row {
+    display: flex; align-items: center; gap: 8px; margin-top: 8px;
+  }
+  .path-label {
+    color: var(--text-faint); font-size: 11px; letter-spacing: 0.8px;
+    text-transform: uppercase; font-weight: 600; flex-shrink: 0;
+  }
+  .path-input {
+    flex: 1; background: transparent; border: 1px solid transparent;
+    color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    padding: 3px 6px; border-radius: 4px; outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .path-input:hover { border-color: var(--border); }
+  .path-input:focus { border-color: var(--accent); background: var(--bg); color: var(--text); }
+  .path-input::placeholder { color: var(--text-faint); font-style: italic; }
+  .btn-import {
+    background: var(--accent-dim); border: 1px solid var(--accent);
+    color: var(--accent); font-family: 'Inter', sans-serif;
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+  }
+  .btn-import:hover { background: var(--accent); color: var(--bg); }
+
+  /* ── EDITABLE NAME & DOMAIN ──────────────────────────────────── */
+  .name-edit {
+    font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: 0.2px;
+    background: transparent; border: 1px solid transparent;
+    padding: 2px 6px; border-radius: 4px; outline: none;
+    font-family: 'Inter', sans-serif; line-height: 1.3;
+    transition: border-color 0.15s, background 0.15s;
+    min-width: 120px; max-width: 100%;
+  }
+  .name-measure {
+    position: absolute; visibility: hidden; height: 0; overflow: hidden; white-space: pre;
+    font-size: 18px; font-weight: 700; font-family: 'Inter', sans-serif;
+    letter-spacing: 0.2px; padding: 0 6px;
+  }
+  .name-edit:hover { border-color: var(--border); }
+  .name-edit:focus { border-color: var(--accent); background: var(--bg); }
+
+  .domain-select-wrap {
+    position: relative; display: inline-block;
+  }
+  .domain-tag.editable { cursor: pointer; }
+  .domain-tag.editable:hover { filter: brightness(1.3); }
+  .domain-dropdown {
+    position: absolute; top: 100%; left: 0; margin-top: 4px;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 6px; overflow: hidden; z-index: 200;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    min-width: 110px;
+    display: none;
+  }
+  .domain-dropdown.open { display: block; }
+  .domain-dropdown-item {
+    padding: 6px 12px; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.8px; text-transform: uppercase;
+    cursor: pointer; transition: background 0.1s;
+    border: none; background: none; width: 100%; text-align: left;
+    display: block;
+  }
+  .domain-dropdown-item:hover { background: var(--surface3); }
+  .domain-dropdown-item.active { background: var(--accent-dim); }
+
+  /* ── NEW PROJECT BUTTON ─────────────────────────────────────── */
+  .btn-new-project {
+    background: var(--accent-dim); border: 1px solid var(--accent);
+    color: var(--accent); font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 5px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-new-project:hover { background: var(--accent); color: var(--bg); }
+  .btn-header-action {
+    background: transparent; border: 1px solid var(--border2);
+    color: var(--text-faint); font-family: 'Inter', sans-serif;
+    font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 5px;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-header-action:hover { border-color: var(--accent); color: var(--accent); }
+
+  .shared-rules-editor {
+    padding: 28px; display: flex; flex-direction: column;
+    height: calc(100% - 56px); box-sizing: border-box;
+  }
+  .shared-rules-editor h2 {
+    font-size: 16px; font-weight: 700; color: var(--text); margin: 0 0 6px 0;
+    flex-shrink: 0;
+  }
+  .shared-rules-editor .rules-hint {
+    font-size: 11px; color: var(--text-faint); margin-bottom: 16px;
+    flex-shrink: 0;
+  }
+  .shared-rules-editor .rules-textarea {
+    flex: 1; min-height: 0; max-height: none; resize: none;
+  }
+
+  .new-project-form { padding: 28px; }
+  .new-project-form h2 {
+    font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text);
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block; font-size: 11px; letter-spacing: 0.8px;
+    text-transform: uppercase; color: var(--text-faint); font-weight: 600; margin-bottom: 5px;
+  }
+  .form-group input, .form-group select {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px;
+    padding: 8px 12px; border-radius: 5px; outline: none; transition: border-color 0.15s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+  .form-group input::placeholder { color: var(--text-faint); }
+  .form-group .hint { font-size: 11px; color: var(--text-faint); margin-top: 3px; }
+
+  /* ── AGENT CONSOLE (persistent bottom panel) ────────────────── */
+  .agent-console {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 150;
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    transition: height 0.2s ease;
+  }
+  .agent-console.collapsed { height: 36px; }
+  .agent-console.expanded { height: 320px; }
+  .agent-console.hidden { display: none; }
+
+  .agent-console-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 20px; cursor: pointer; user-select: none;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .agent-console-bar:hover { background: var(--surface3); }
+  .agent-console-title {
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-dim); font-weight: 600; flex: 1;
+  }
+  .agent-console-count {
+    font-size: 10px; padding: 2px 8px; border-radius: 10px;
+    font-weight: 600; background: var(--accent-dim); color: var(--accent);
+  }
+  .agent-console-count.has-running { background: var(--green-dim); color: var(--green-text); }
+  .agent-console-chevron {
+    color: var(--text-faint); font-size: 10px; transition: transform 0.2s;
+  }
+  .agent-console.expanded .agent-console-chevron { transform: rotate(180deg); }
+
+  .agent-console-body {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+  }
+  .agent-console.collapsed .agent-console-body { display: none; }
+  .agent-console-body::-webkit-scrollbar { width: 5px; }
+  .agent-console-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  .agent-console-empty {
+    color: var(--text-faint); font-size: 12px; text-align: center;
+    padding: 24px; font-style: italic;
+  }
+
+  .ac-session {
+    border-bottom: 1px solid var(--border); padding: 0;
+  }
+  .ac-session:last-child { border-bottom: none; }
+  .ac-session-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 20px; cursor: pointer; user-select: none;
+    transition: background 0.1s;
+  }
+  .ac-session-header:hover { background: var(--bg); }
+  .ac-session-project {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--accent); flex-shrink: 0;
+  }
+  .ac-session-task {
+    flex: 1; font-size: 12px; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ac-session-time {
+    font-size: 11px; color: var(--text-faint); font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+  .ac-session-chevron { color: var(--text-faint); font-size: 10px; transition: transform 0.15s; flex-shrink: 0; }
+  .ac-session-chevron.open { transform: rotate(90deg); }
+  .ac-stop-btn {
+    background: var(--red-dim); border: 1px solid var(--red);
+    color: var(--red-text); font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+    cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+  }
+  .ac-stop-btn:hover { background: var(--red); color: var(--bg); }
+
+  .ac-session-output {
+    display: none; background: #0a0c10; border-top: 1px solid var(--border);
+    max-height: 200px; overflow-y: auto; padding: 10px 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.5;
+    color: #e2e8f0; white-space: pre-wrap; word-break: break-word;
+  }
+  .ac-session-output.open { display: block; }
+  .ac-session-output::-webkit-scrollbar { width: 4px; }
+  .ac-session-output::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* Adjust main content to avoid being hidden behind console */
+  body.console-open .main { padding-bottom: 340px; }
+  body.console-visible .main { padding-bottom: 50px; }
+</style>
+</head>
+<body>
+<span id="name-measure" class="name-measure"></span>
+
+<div class="header">
+  <div class="header-left">
+    <span class="logo">Mission Control</span>
+    <span class="tagline">Project Intelligence</span>
+  </div>
+  <div class="header-right">
+    <button class="btn-header-action" onclick="openSharedRulesEditor()">Shared Rules</button>
+    <button class="btn-new-project" onclick="openNewProjectForm()">+ New</button>
+    <span class="refresh-timer" id="refresh-timer">refresh in 30s</span>
+    <div class="live-badge"><div class="live-dot"></div>Live</div>
+  </div>
+</div>
+
+<div class="stats-bar" id="stats-bar"></div>
+
+<div class="filter-row">
+  <span class="filter-label">Filter</span>
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="active">Active</button>
+  <button class="filter-btn" data-filter="blocked">Blocked</button>
+  <button class="filter-btn" data-filter="waiting">Waiting</button>
+  <button class="filter-btn" data-filter="parked">Parked</button>
+  <button class="filter-btn" data-filter="trading">Trading</button>
+  <button class="filter-btn" data-filter="infra">Infra</button>
+  <button class="filter-btn" data-filter="hobby">Hobby</button>
+</div>
+
+<div class="main">
+  <div class="projects-col" id="projects-col"><div class="loading">Loading...</div></div>
+  <div class="feed-col">
+    <div class="feed-header">Activity Stream</div>
+    <div class="feed-entries" id="feed-entries"><div class="loading">—</div></div>
+  </div>
+</div>
+
+<div class="modal-layer" id="modal-layer"></div>
+<div class="minimized-tray" id="minimized-tray"></div>
+
+<div class="agent-console hidden collapsed" id="agent-console">
+  <div class="agent-console-bar" onclick="toggleAgentConsole()">
+    <span class="agent-console-title">Agent Sessions</span>
+    <span class="agent-console-count" id="ac-count">0</span>
+    <span class="agent-console-chevron">&#9650;</span>
+  </div>
+  <div class="agent-console-body" id="ac-body"></div>
+</div>
+
+<script>
+// ── API base: empty for standalone Flask, full URL when running inside Tauri ──
+const API_BASE = window.__TAURI_INTERNALS__ ? 'http://localhost:5199' : '';
+
+let allProjects = [];
+let projectOrder = JSON.parse(localStorage.getItem('projectOrder') || '[]');
+let activeFilter = 'all';
+let showDoneMap = {};
+let modalSearchQuery = {};  // projectId → search filter string
+let openAttPanels = new Set();
+let undoStack = [];  // [{type, projectId, itemId, data, label}]
+let modalActiveTab = {};  // projectId → 'backlog' | 'agent' | 'agent-log' | 'activity'
+let refreshCountdown = 30;
+let refreshInterval, countdownInterval;
+let lastDragEnd = 0;
+
+async function fetchProjects() {
+  try {
+    const res = await fetch(API_BASE + '/api/projects');
+    allProjects = await res.json();
+    applyOrder();
+    render();
+  } catch(e) {
+    document.getElementById('projects-col').innerHTML = '<div class="loading">Failed to load — is server running?</div>';
+  }
+}
+
+function applyOrder() {
+  if (projectOrder.length === 0) return;
+  const orderMap = {};
+  projectOrder.forEach((id, i) => orderMap[id] = i);
+  allProjects.sort((a, b) => {
+    const oa = orderMap[a.id] !== undefined ? orderMap[a.id] : 9999;
+    const ob = orderMap[b.id] !== undefined ? orderMap[b.id] : 9999;
+    return oa - ob;
+  });
+}
+
+function render() { renderStats(); renderProjects(); renderFeed(); }
+
+function renderStats() {
+  const counts = {active:0, blocked:0, waiting:0, parked:0};
+  allProjects.forEach(p => { if(counts[p.status] !== undefined) counts[p.status]++; });
+  const cfg = [
+    {key:'active',  label:'Active',  color:'var(--green)'},
+    {key:'blocked', label:'Blocked', color:'var(--red)'},
+    {key:'waiting', label:'Waiting', color:'var(--amber)'},
+    {key:'parked',  label:'Parked',  color:'var(--text-faint)'},
+  ];
+  document.getElementById('stats-bar').innerHTML = cfg.map(c => `
+    <div class="stat" onclick="setFilter('${c.key}')">
+      <div class="stat-dot" style="background:${c.color}"></div>
+      <div>
+        <div class="stat-count" style="color:${c.color}">${counts[c.key]}</div>
+        <div class="stat-label">${c.label}</div>
+      </div>
+    </div>`).join('');
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+  renderProjects();
+}
+
+function filterProjects() {
+  if (activeFilter === 'all') return allProjects;
+  if (['active','blocked','waiting','parked'].includes(activeFilter))
+    return allProjects.filter(p => p.status === activeFilter);
+  return allProjects.filter(p => p.domain === activeFilter);
+}
+
+function renderProjects() {
+  const filtered = filterProjects();
+  const col = document.getElementById('projects-col');
+  if (!filtered.length) { col.innerHTML = '<div class="loading">No projects match filter</div>'; return; }
+  col.innerHTML = filtered.map(p => tileHTML(p)).join('');
+  // Attach click handlers
+  col.querySelectorAll('.card').forEach(card => {
+    const id = card.dataset.id;
+    card.addEventListener('click', (e) => {
+      if (e.defaultPrevented || lastDragEnd > Date.now() - 200) return;
+      openProjectModal(id);
+    });
+  });
+}
+
+// ── Tile HTML (compact grid card) ───────────────────────────────────────────
+
+function hasRunningAgent(projectId) {
+  return agentHistory.some(h => h.projectId === projectId && h.status === 'running');
+}
+
+function tileHTML(p) {
+  const sc = `status-${p.status||'unknown'}`;
+  const dc = `domain-${p.domain||'general'}`;
+  const backlog = p.backlog || [];
+  const openItems = backlog.filter(i => i.status === 'open');
+  const backlogBadge = openItems.length
+    ? `<span class="backlog-badge">${openItems.length} open</span>` : '';
+  const agentBadge = hasRunningAgent(p.id)
+    ? `<span class="agent-running-badge">Agent Running</span>` : '';
+
+  const taskText = p.blocked
+    ? `<div class="tile-task blocked-text">${esc(p.blocked_reason||'Blocked')}</div>`
+    : (p.current_task
+      ? `<div class="tile-task">${esc(p.current_task)}</div>`
+      : `<div class="tile-task empty">${esc(p.next_action||'No current task')}</div>`);
+
+  return `
+  <div class="card ${sc}" data-id="${esc(p.id)}">
+    <div class="card-header">
+      <div class="card-title-row">
+        <span class="project-name">${esc(p.name||p.id)}</span>
+        <span class="domain-tag ${dc}">${esc(p.domain||'general')}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="status-pill ${sc}">${esc(p.status||'unknown')}</span>
+        ${agentBadge}
+      </div>
+    </div>
+    <div class="tile-body">
+      ${taskText}
+    </div>
+    <div class="tile-footer">
+      ${backlogBadge}
+      <span class="time-ago">${esc(p.last_updated_relative||'')}</span>
+    </div>
+  </div>`;
+}
+
+// ── Modal HTML (full detail view) ───────────────────────────────────────────
+
+function modalContentHTML(p) {
+  const sc = `status-${p.status||'unknown'}`;
+  const dc = `domain-${p.domain||'general'}`;
+  const showDone = showDoneMap[p.id] || false;
+  const backlog = p.backlog || [];
+  const openItems = backlog.filter(i => i.status === 'open');
+  const doneItems = backlog.filter(i => i.status === 'done');
+
+  const backlogBadge = openItems.length
+    ? `<span class="backlog-badge">${openItems.length} open</span>` : '';
+
+  const currentTaskHTML = p.blocked
+    ? `<span class="summary-value blocked-text">${esc(p.blocked_reason||'Blocked')}</span>`
+    : `<span class="summary-value current-task">${esc(p.current_task||'—')}</span>`;
+
+  const activeTab = modalActiveTab[p.id] || 'agent';
+
+  const logHTML = (p.activity_log||[]).slice(0,20).map(e => `
+    <div class="log-entry">
+      <span class="log-ts">${esc(e.ts_relative||e.ts||'')}</span>
+      <span class="log-msg">${esc(e.msg||'')}</span>
+    </div>`).join('');
+
+  const visibleItems = [...openItems, ...(showDone ? doneItems : [])];
+  const backlogItemsHTML = visibleItems.map(item => `
+    <div class="backlog-item ${item.status==='done'?'done':''} priority-${item.priority||'normal'}" data-item-id="${esc(item.id)}">
+      <button class="backlog-check" onclick="toggleDone(event,'${esc(p.id)}','${esc(item.id)}','${item.status}')" title="${item.status==='done'?'Reopen':'Mark done'}">
+        ${item.status==='done' ? '✓' : ''}
+      </button>
+      <span class="backlog-text" contenteditable="true" spellcheck="true"
+        onblur="saveBacklogText(event,'${esc(p.id)}','${esc(item.id)}')"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+      >${esc(item.text)}</span>
+      <div class="backlog-meta">
+        <span class="priority-badge priority-${item.priority||'normal'}"
+          onclick="cyclePriority(event,'${esc(p.id)}','${esc(item.id)}','${item.priority||'normal'}')"
+          title="Click to change priority">${item.priority||'normal'}</span>
+        ${item.source && item.source !== 'dashboard' ? `<span class="backlog-source">${esc(item.source)}</span>` : ''}
+        ${p.project_path && item.status !== 'done' ? `<button class="backlog-dispatch" onclick="dispatchBacklogItem(event,'${esc(p.id)}','${esc(item.id)}')" title="Send to agent">▶</button>` : ''}
+        <button class="att-btn ${(item.attachments||[]).length > 0 ? 'has-atts' : ''}"
+          onclick="toggleAttPanel(event,'${esc(p.id)}','${esc(item.id)}')"
+          title="Attachments">📎${(item.attachments||[]).length > 0 ? ' '+item.attachments.length : ''}</button>
+        <button class="backlog-del" onclick="deleteBacklogItem(event,'${esc(p.id)}','${esc(item.id)}')" title="Delete">✕</button>
+      </div>
+      <div class="att-panel${openAttPanels.has(item.id) ? ' open' : ''}" id="att-${esc(item.id)}">
+        <div class="att-drop-zone" id="drop-${esc(item.id)}"
+          ondragover="attDragOver(event,'${esc(item.id)}')"
+          ondragleave="attDragLeave('${esc(item.id)}')"
+          ondrop="attDrop(event,'${esc(p.id)}','${esc(item.id)}')"
+          onclick="document.getElementById('file-${esc(item.id)}').click()">
+          <input type="file" id="file-${esc(item.id)}" multiple
+            onchange="attFileSelected(event,'${esc(p.id)}','${esc(item.id)}')">
+          Drop files here or click to browse
+        </div>
+        <div class="att-list" id="attlist-${esc(item.id)}">
+          ${(item.attachments||[]).map(a => attHTML(a, p.id, item.id)).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+
+  const undoBtn = undoStack.length && undoStack[undoStack.length-1].projectId === p.id
+    ? `<button class="btn-undo" onclick="performUndo(event)" title="Undo ${undoStack[undoStack.length-1].label}">↩ Undo</button>`
+    : '';
+  const doneToggle = doneItems.length
+    ? `<button class="toggle-done" onclick="toggleShowDone(event,'${esc(p.id)}')">${showDone ? `Hide ${doneItems.length} done` : `Show ${doneItems.length} done`}</button>`
+    : '';
+
+  return `
+    <div class="modal-header ${sc}">
+      <div class="modal-window-controls">
+        <button class="modal-minimize" onclick="minimizeModal('${esc(p.id)}')" title="Minimize">&#x2015;</button>
+        <button class="modal-close" onclick="closeModalById('${esc(p.id)}')" title="Close">&#10005;</button>
+      </div>
+      <div class="card-title-row" style="margin-bottom:8px">
+        <input class="name-edit" type="text" value="${esc(p.name||p.id)}"
+          onblur="saveProjectName('${esc(p.id)}',this)"
+          onkeydown="if(event.key==='Enter'){this.blur()}"
+          oninput="autoSizeNameInput(this)"
+        >
+        <div class="domain-select-wrap">
+          <span class="domain-tag ${dc} editable" onclick="toggleDomainDropdown(event,'${esc(p.id)}')">${esc(p.domain||'general')}</span>
+          <div class="domain-dropdown" id="domain-dd-${esc(p.id)}">
+            ${['general','trading','infra','hobby'].map(d =>
+              `<button class="domain-dropdown-item domain-${d}${(p.domain||'general')===d?' active':''}"
+                onclick="saveDomain(event,'${esc(p.id)}','${d}')">${d}</button>`
+            ).join('')}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="status-pill ${sc}">${esc(p.status||'unknown')}</span>
+        <span class="time-ago">${esc(p.last_updated_relative||'')}</span>
+      </div>
+      <div class="path-row">
+        <span class="path-label">Path</span>
+        <input class="path-input" type="text" value="${esc(p.project_path||'')}"
+          placeholder="No path set — click to edit"
+          onblur="saveProjectPath('${esc(p.id)}',this)"
+          onkeydown="if(event.key==='Enter'){this.blur()}"
+        >
+        ${p.project_path ? `<button class="btn-import" onclick="importFromProject('${esc(p.id)}')" title="Import from CHANGELOG.md">Import</button>` : ''}
+      </div>
+      ${p.description ? `<div class="description" style="margin-top:8px">${esc(p.description)}</div>` : ''}
+    </div>
+    <div class="card-summary">
+      <div class="summary-item">
+        <div class="summary-label">${p.blocked ? 'Blocked — last task' : 'Current task'}</div>
+        ${currentTaskHTML}
+      </div>
+      <div class="summary-item">
+        <div class="summary-label">Next action</div>
+        <span class="summary-value next-text">${esc(p.next_action||'—')}</span>
+      </div>
+    </div>
+    <div class="modal-tab-bar">
+      <div class="modal-tab ${activeTab==='agent'?'active':''}" onclick="switchModalTab('${esc(p.id)}','agent')">Agent</div>
+      <div class="modal-tab ${activeTab==='backlog'?'active':''}" onclick="switchModalTab('${esc(p.id)}','backlog')">Backlog${openItems.length ? `<span class="tab-badge">${openItems.length}</span>` : ''}</div>
+      <div class="modal-tab ${activeTab==='agent-log'?'active':''}" onclick="switchModalTab('${esc(p.id)}','agent-log')">Agent Log</div>
+      <div class="modal-tab ${activeTab==='activity'?'active':''}" onclick="switchModalTab('${esc(p.id)}','activity')">Activity</div>
+      ${activeTab !== 'agent' ? `<div class="modal-tab-search">
+        <input type="text" id="tab-search-${esc(p.id)}" placeholder="Filter..."
+          value="${esc(modalSearchQuery[p.id] || '')}"
+          oninput="modalSearchQuery['${esc(p.id)}']=this.value;applyTabFilter('${esc(p.id)}')"
+        >${modalSearchQuery[p.id] ? `<span class="search-clear" onclick="clearTabSearch('${esc(p.id)}')">&#x2715;</span>` : ''}
+      </div>` : ''}
+    </div>
+    <div class="modal-scroll-body">
+      <div class="modal-tab-content ${activeTab==='backlog'?'active':''}" data-tab="backlog">
+        <div class="card-section">
+          <div class="section-title">
+            <span>Backlog ${backlogBadge}</span>
+            ${undoBtn}${doneToggle}
+          </div>
+          <div class="backlog-list">${backlogItemsHTML}</div>
+          <div class="backlog-add">
+            <textarea spellcheck="true" class="backlog-input" id="backlog-input-${esc(p.id)}" rows="2"
+              placeholder="Add action item... (paste/drop images here)"
+              onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();addBacklogItem('${esc(p.id)}')}"
+              onpaste="handleCreatePaste(event,'${esc(p.id)}')"
+              ondragover="createDragOver(event,'${esc(p.id)}')"
+              ondragleave="createDragLeave('${esc(p.id)}')"
+              ondrop="createDrop(event,'${esc(p.id)}')"></textarea>
+            <div class="create-previews" id="create-previews-${esc(p.id)}"></div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <select class="priority-select" id="backlog-pri-${esc(p.id)}">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="low">Low</option>
+              </select>
+              <button class="btn-add" onclick="addBacklogItem('${esc(p.id)}')">+ Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-tab-content ${activeTab==='agent'?'active':''}" data-tab="agent">
+        ${agentPanelHTML(p)}
+        ${rulesPanelHTML(p)}
+      </div>
+      <div class="modal-tab-content ${activeTab==='agent-log'?'active':''}" data-tab="agent-log">
+        ${agentLogPanelHTML(p)}
+      </div>
+      <div class="modal-tab-content ${activeTab==='activity'?'active':''}" data-tab="activity">
+        <div class="card-section">
+          <div class="section-title">Activity Log</div>
+          <div class="log-entries">${logHTML || '<div style="color:var(--text-faint);font-style:italic">No activity yet</div>'}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Multi-modal window manager ──────────────────────────────────────────────
+
+const openModals = new Map();   // modalId -> { projectId, element, minimized, zIndex }
+let focusedModalId = null;
+let nextModalZ = 201;
+
+function getStatusColor(status) {
+  const map = { active: 'var(--green)', blocked: 'var(--red)', waiting: 'var(--amber)', parked: 'var(--text-faint)' };
+  return map[status] || 'var(--text-faint)';
+}
+
+function centerModalElement(win) {
+  const w = win.offsetWidth, h = win.offsetHeight;
+  const offset = Math.max(0, openModals.size - 1) * 30;
+  win.style.left = Math.max(0, (window.innerWidth - w) / 2 + offset) + 'px';
+  win.style.top = Math.max(0, (window.innerHeight - h) / 2 + offset) + 'px';
+}
+
+function focusModal(modalId) {
+  const entry = openModals.get(modalId);
+  if (!entry || entry.minimized) return;
+  if (focusedModalId && openModals.has(focusedModalId)) {
+    openModals.get(focusedModalId).element.classList.remove('focused');
+  }
+  const z = nextModalZ++;
+  entry.zIndex = z;
+  entry.element.style.zIndex = z;
+  entry.element.classList.add('focused');
+  focusedModalId = modalId;
+}
+
+function openProjectModal(projectId) {
+  const p = allProjects.find(x => x.id === projectId);
+  if (!p) return;
+
+  // If already open, focus/restore it
+  if (openModals.has(projectId)) {
+    const entry = openModals.get(projectId);
+    if (entry.minimized) restoreModal(projectId);
+    focusModal(projectId);
+    return;
+  }
+
+  const win = document.createElement('div');
+  win.className = 'modal-window';
+  win.dataset.modalId = projectId;
+
+  const content = document.createElement('div');
+  content.className = 'modal-content';
+  content.innerHTML = modalContentHTML(p);
+  win.appendChild(content);
+
+  document.getElementById('modal-layer').appendChild(win);
+  const nameInput = content.querySelector('.name-edit');
+  if (nameInput) autoSizeNameInput(nameInput);
+
+  const z = nextModalZ++;
+  win.style.zIndex = z;
+  openModals.set(projectId, { projectId, element: win, minimized: false, zIndex: z });
+
+  centerModalElement(win);
+  focusModal(projectId);
+  fetchAgentStatus(projectId).then(() => refreshModalById(projectId));
+}
+
+function closeModalById(modalId) {
+  const entry = openModals.get(modalId);
+  if (!entry) return;
+  entry.element.remove();
+  const chip = document.getElementById('chip-' + CSS.escape(modalId));
+  if (chip) chip.remove();
+  openModals.delete(modalId);
+
+  if (entry.projectId) {
+    const p = allProjects.find(x => x.id === entry.projectId);
+    if (p && p.backlog) p.backlog.forEach(item => openAttPanels.delete(item.id));
+  }
+
+  if (focusedModalId === modalId) {
+    focusedModalId = null;
+    let topId = null, topZ = 0;
+    for (const [id, e] of openModals) {
+      if (!e.minimized && e.zIndex > topZ) { topZ = e.zIndex; topId = id; }
+    }
+    if (topId) focusModal(topId);
+  }
+}
+
+function closeModal() {
+  if (focusedModalId) closeModalById(focusedModalId);
+}
+
+function minimizeModal(modalId) {
+  const entry = openModals.get(modalId);
+  if (!entry) return;
+  entry.minimized = true;
+  entry.savedScrollTop = entry.element.querySelector('.modal-scroll-body')?.scrollTop || 0;
+  entry.element.classList.add('minimized');
+
+  const tray = document.getElementById('minimized-tray');
+  const p = entry.projectId ? allProjects.find(x => x.id === entry.projectId) : null;
+  const name = p ? (p.name || p.id) : modalId.replace(/^__/, '').replace(/_/g, ' ');
+  const statusColor = p ? getStatusColor(p.status) : 'var(--text-faint)';
+
+  const chipEl = document.createElement('div');
+  chipEl.className = 'minimized-chip';
+  chipEl.id = 'chip-' + modalId;
+  chipEl.innerHTML = `
+    <span class="chip-status" style="background:${statusColor}"></span>
+    <span>${esc(name)}</span>
+    <span class="chip-close" onclick="event.stopPropagation(); closeModalById('${esc(modalId)}')" title="Close">&#10005;</span>`;
+  chipEl.addEventListener('click', (e) => {
+    if (!e.target.closest('.chip-close')) restoreModal(modalId);
+  });
+  tray.appendChild(chipEl);
+
+  if (focusedModalId === modalId) {
+    focusedModalId = null;
+    let topId = null, topZ = 0;
+    for (const [id, e] of openModals) {
+      if (!e.minimized && e.zIndex > topZ) { topZ = e.zIndex; topId = id; }
+    }
+    if (topId) focusModal(topId);
+  }
+}
+
+function restoreModal(modalId) {
+  const entry = openModals.get(modalId);
+  if (!entry) return;
+  entry.minimized = false;
+  entry.element.classList.remove('minimized');
+  const chip = document.getElementById('chip-' + CSS.escape(modalId));
+  if (chip) chip.remove();
+  if (entry.projectId) refreshModalById(modalId);
+  const scrollBody = entry.element.querySelector('.modal-scroll-body');
+  if (scrollBody && entry.savedScrollTop) scrollBody.scrollTop = entry.savedScrollTop;
+  focusModal(modalId);
+}
+
+function refreshModalById(modalId) {
+  const entry = openModals.get(modalId);
+  if (!entry || entry.minimized) return;
+  const p = allProjects.find(x => x.id === entry.projectId);
+  if (!p) { closeModalById(modalId); return; }
+
+  const content = entry.element.querySelector('.modal-content');
+  const scrollBody = content.querySelector('.modal-scroll-body');
+  const savedScroll = scrollBody ? scrollBody.scrollTop : 0;
+  const saved = {};
+  let focusedId = null, selStart = 0, selEnd = 0;
+  content.querySelectorAll('textarea, input[type="text"]').forEach(ta => {
+    if (ta.id && ta.value) saved[ta.id] = ta.value;
+    if (ta === document.activeElement) {
+      focusedId = ta.id;
+      selStart = ta.selectionStart;
+      selEnd = ta.selectionEnd;
+    }
+  });
+  content.innerHTML = modalContentHTML(p);
+  for (const [id, val] of Object.entries(saved)) {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  }
+  // Restore focus and cursor position
+  if (focusedId) {
+    const el = document.getElementById(focusedId);
+    if (el) { el.focus(); el.selectionStart = selStart; el.selectionEnd = selEnd; }
+  }
+  // Restore scroll position
+  const newScrollBody = content.querySelector('.modal-scroll-body');
+  if (newScrollBody) newScrollBody.scrollTop = savedScroll;
+  // Auto-size name input
+  const nameInput = content.querySelector('.name-edit');
+  if (nameInput) autoSizeNameInput(nameInput);
+  // Scroll agent output to bottom
+  const sid = activeAgentTab[entry.projectId];
+  if (sid) {
+    const out = document.getElementById(`agent-output-${sid}`);
+    if (out) out.scrollTop = out.scrollHeight;
+  }
+  // Reapply per-modal zoom level
+  if (modalZoomLevels[modalId]) {
+    entry.element.querySelectorAll('.agent-output, .ac-session-output, .plan-viewer-body').forEach(el => {
+      el.style.fontSize = modalZoomLevels[modalId] + 'px';
+    });
+  }
+  // Reapply tab search filter
+  if (modalSearchQuery[entry.projectId]) {
+    applyTabFilter(entry.projectId);
+  }
+}
+
+function refreshModal() {
+  for (const [modalId, entry] of openModals) {
+    if (entry.projectId) refreshModalById(modalId);
+  }
+}
+
+// Escape key closes the focused modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && focusedModalId) closeModalById(focusedModalId);
+});
+
+// Click on any modal window to bring it to front
+document.getElementById('modal-layer').addEventListener('mousedown', (e) => {
+  const win = e.target.closest('.modal-window');
+  if (win) focusModal(win.dataset.modalId);
+}, true);
+
+// ── Drag-and-drop reordering (mouse events) ─────────────────────────────────
+
+let dragState = null;
+
+document.getElementById('projects-col').addEventListener('mousedown', (e) => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+  // Don't start drag on interactive elements inside the card
+  if (e.target.closest('button, a, input, select, textarea, [contenteditable]')) return;
+  const startX = e.clientX, startY = e.clientY;
+  dragState = { id: card.dataset.id, card, startX, startY, started: false };
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!dragState) return;
+  const dx = e.clientX - dragState.startX;
+  const dy = e.clientY - dragState.startY;
+  // Require 8px movement to start drag (avoids interfering with clicks)
+  if (!dragState.started) {
+    if (Math.abs(dx) + Math.abs(dy) < 8) return;
+    dragState.started = true;
+    dragState.card.classList.add('dragging');
+  }
+  // Highlight the card we're hovering over
+  const col = document.getElementById('projects-col');
+  col.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over-left', 'drag-over-right'));
+  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.card');
+  if (target && target.dataset.id !== dragState.id) {
+    const rect = target.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    target.classList.add(e.clientX < midX ? 'drag-over-left' : 'drag-over-right');
+  }
+});
+
+document.addEventListener('mouseup', (e) => {
+  if (!dragState) return;
+  const { id: srcId, started } = dragState;
+  dragState = null;
+  const col = document.getElementById('projects-col');
+  col.querySelectorAll('.card').forEach(c => c.classList.remove('dragging', 'drag-over-left', 'drag-over-right'));
+  if (!started) return;
+  lastDragEnd = Date.now();
+  // Find drop target
+  const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.card');
+  const targetId = target?.dataset.id;
+  if (targetId && srcId !== targetId) {
+    reorderProjects(srcId, targetId);
+  }
+});
+
+function reorderProjects(srcId, targetId) {
+  const ids = allProjects.map(p => p.id);
+  const srcIdx = ids.indexOf(srcId);
+  const targetIdx = ids.indexOf(targetId);
+  if (srcIdx === -1 || targetIdx === -1) return;
+
+  // Move src to target position
+  const [moved] = allProjects.splice(srcIdx, 1);
+  allProjects.splice(targetIdx, 0, moved);
+
+  // Update order
+  projectOrder = allProjects.map(p => p.id);
+  localStorage.setItem('projectOrder', JSON.stringify(projectOrder));
+  renderProjects();
+
+  // Persist to server
+  fetch(API_BASE + '/api/projects/order', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({order: projectOrder})
+  }).catch(() => {});
+}
+
+// ── Create-form attachment handling ──────────────────────────────────────────
+
+const pendingFiles = new Map();
+
+function handleCreatePaste(e, projectId) {
+  const items = Array.from(e.clipboardData?.items || []);
+  const imageItems = items.filter(i => i.type.startsWith('image/'));
+  if (imageItems.length === 0) return;
+  e.preventDefault();
+  const files = pendingFiles.get(projectId) || [];
+  for (const item of imageItems) {
+    const blob = item.getAsFile();
+    if (blob) files.push(blob);
+  }
+  pendingFiles.set(projectId, files);
+  renderCreatePreviews(projectId);
+}
+
+function createDragOver(e, projectId) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById(`backlog-input-${projectId}`)?.classList.add('drag-over');
+}
+
+function createDragLeave(projectId) {
+  document.getElementById(`backlog-input-${projectId}`)?.classList.remove('drag-over');
+}
+
+function createDrop(e, projectId) {
+  e.preventDefault();
+  e.stopPropagation();
+  createDragLeave(projectId);
+  const droppedFiles = Array.from(e.dataTransfer.files);
+  if (droppedFiles.length === 0) return;
+  const files = pendingFiles.get(projectId) || [];
+  files.push(...droppedFiles);
+  pendingFiles.set(projectId, files);
+  renderCreatePreviews(projectId);
+}
+
+function renderCreatePreviews(projectId) {
+  const container = document.getElementById(`create-previews-${projectId}`);
+  if (!container) return;
+  const files = pendingFiles.get(projectId) || [];
+  container.innerHTML = files.map((file, i) => {
+    const isImage = file.type.startsWith('image/');
+    const thumbContent = isImage
+      ? `<img src="${URL.createObjectURL(file)}" alt="${esc(file.name)}">`
+      : `<div class="file-icon">📎</div>`;
+    return `
+      <div class="create-preview-item" title="${esc(file.name)}">
+        ${thumbContent}
+        <div class="file-name">${esc(file.name)}</div>
+        <button class="create-preview-remove" onclick="removeCreateFile('${esc(projectId)}',${i})">✕</button>
+      </div>`;
+  }).join('');
+}
+
+function removeCreateFile(projectId, index) {
+  const files = pendingFiles.get(projectId) || [];
+  files.splice(index, 1);
+  if (files.length === 0) pendingFiles.delete(projectId);
+  else pendingFiles.set(projectId, files);
+  renderCreatePreviews(projectId);
+}
+
+// ── Backlog actions ─────────────────────────────────────────────────────────
+
+async function addBacklogItem(projectId) {
+  const input = document.getElementById(`backlog-input-${projectId}`);
+  const priSel = document.getElementById(`backlog-pri-${projectId}`);
+  const text = input.value.trim();
+  const files = pendingFiles.get(projectId) || [];
+  if (!text && files.length === 0) return;
+  if (!text) { input.focus(); return; }
+  input.value = '';
+  input.disabled = true;
+  try {
+    const res = await fetch(API_BASE + `/api/project/${projectId}/backlog`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text, priority: priSel.value, source: 'dashboard'})
+    });
+    const data = await res.json();
+    if (data.item && data.item.id && files.length > 0) {
+      for (const file of files) {
+        await uploadFile(projectId, data.item.id, file);
+      }
+    }
+    pendingFiles.delete(projectId);
+    const previewEl = document.getElementById(`create-previews-${projectId}`);
+    if (previewEl) previewEl.innerHTML = '';
+    await refreshSilent();
+  } finally { input.disabled = false; input.focus(); }
+}
+
+async function toggleDone(e, projectId, itemId, currentStatus) {
+  e.stopPropagation();
+  pushUndo({type: 'status', projectId, itemId, data: {status: currentStatus}, label: currentStatus === 'done' ? 'mark open' : 'mark done'});
+  await patchItem(projectId, itemId, {status: currentStatus === 'done' ? 'open' : 'done'});
+}
+
+async function cyclePriority(e, projectId, itemId, current) {
+  e.stopPropagation();
+  const cycle = {normal:'high', high:'low', low:'normal'};
+  pushUndo({type: 'priority', projectId, itemId, data: {priority: current}, label: 'priority change'});
+  await patchItem(projectId, itemId, {priority: cycle[current]||'normal'});
+}
+
+async function saveBacklogText(e, projectId, itemId) {
+  const text = e.target.innerText.trim();
+  if (!text) return;
+  const p = allProjects.find(x => x.id === projectId);
+  const oldItem = p && (p.backlog || []).find(i => i.id === itemId);
+  if (oldItem && oldItem.text !== text) {
+    pushUndo({type: 'text', projectId, itemId, data: {text: oldItem.text}, label: 'text edit'});
+  }
+  await patchItem(projectId, itemId, {text});
+}
+
+async function deleteBacklogItem(e, projectId, itemId) {
+  e.stopPropagation();
+  if (!confirm('Delete this item?')) return;
+  const p = allProjects.find(x => x.id === projectId);
+  const item = p && (p.backlog || []).find(i => i.id === itemId);
+  if (item) {
+    pushUndo({type: 'delete', projectId, itemId, data: {...item}, label: 'delete'});
+  }
+  await fetch(API_BASE + `/api/project/${projectId}/backlog/${itemId}`, {method: 'DELETE'});
+  await refreshSilent();
+}
+
+function dispatchBacklogItem(e, projectId, itemId) {
+  e.stopPropagation();
+  const p = allProjects.find(x => x.id === projectId);
+  if (!p) return;
+  const item = (p.backlog || []).find(i => i.id === itemId);
+  if (!item) return;
+  // Fill agent input and dispatch
+  const input = document.getElementById(`agent-task-${projectId}`);
+  if (input) {
+    input.value = item.text;
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input.focus();
+  }
+}
+
+async function patchItem(projectId, itemId, data, skipUndo) {
+  await fetch(API_BASE + `/api/project/${projectId}/backlog/${itemId}`, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  await refreshSilent();
+}
+
+function toggleShowDone(e, projectId) {
+  e.stopPropagation();
+  showDoneMap[projectId] = !showDoneMap[projectId];
+  refreshModal();
+}
+
+function pushUndo(entry) {
+  undoStack.push(entry);
+  if (undoStack.length > 20) undoStack.shift();
+}
+
+async function performUndo(e) {
+  e.stopPropagation();
+  const entry = undoStack.pop();
+  if (!entry) return;
+  if (entry.type === 'status' || entry.type === 'priority' || entry.type === 'text') {
+    await patchItem(entry.projectId, entry.itemId, entry.data, true);
+  } else if (entry.type === 'delete') {
+    // Re-create the deleted item via POST, then PATCH to restore its full state
+    const res = await fetch(API_BASE + `/api/project/${entry.projectId}/backlog`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text: entry.data.text, priority: entry.data.priority || 'normal', source: entry.data.source || 'dashboard'})
+    });
+    if (res.ok && entry.data.status === 'done') {
+      const result = await res.json();
+      await fetch(API_BASE + `/api/project/${entry.projectId}/backlog/${result.item.id}`, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: 'done'})
+      });
+    }
+    await refreshSilent();
+  }
+}
+
+// ── Attachment helpers ──────────────────────────────────────────────────────
+
+function attHTML(a, projectId, itemId) {
+  const url = API_BASE + `/api/attachments/${a.stored_name}`;
+  const isImage = a.type === 'image';
+  const icon = a.type === 'pdf' ? '📄' : '📎';
+  const kb = a.size ? (a.size < 1024*1024 ? (a.size/1024).toFixed(0)+'KB' : (a.size/1024/1024).toFixed(1)+'MB') : '';
+  const thumb = isImage
+    ? `<img class="att-thumb" src="${url}" alt="${esc(a.original_name)}" onerror="this.style.display='none'">`
+    : `<div class="att-icon">${icon}</div>`;
+  return `
+  <div class="att-item" data-att-id="${esc(a.id)}">
+    ${thumb}
+    <div class="att-info">
+      <div class="att-name" title="${esc(a.original_name)}">${esc(a.original_name)}</div>
+      <div class="att-size">${kb}</div>
+    </div>
+    <a href="${url}" target="_blank" rel="noopener"><button class="att-open">Open</button></a>
+    <button class="att-del" onclick="deleteAttachment(event,'${projectId}','${itemId}','${esc(a.id)}')" title="Remove">✕</button>
+  </div>`;
+}
+
+function toggleAttPanel(e, projectId, itemId) {
+  e.stopPropagation();
+  const panel = document.getElementById('att-'+itemId);
+  if (panel) {
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) openAttPanels.add(itemId);
+    else openAttPanels.delete(itemId);
+  }
+}
+
+function attDragOver(e, itemId) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.getElementById('drop-'+itemId)?.classList.add('drag-over');
+}
+function attDragLeave(itemId) {
+  document.getElementById('drop-'+itemId)?.classList.remove('drag-over');
+}
+async function attDrop(e, projectId, itemId) {
+  e.preventDefault();
+  e.stopPropagation();
+  attDragLeave(itemId);
+  const files = Array.from(e.dataTransfer.files);
+  for (const file of files) await uploadFile(projectId, itemId, file);
+}
+async function attFileSelected(e, projectId, itemId) {
+  const files = Array.from(e.target.files);
+  for (const file of files) await uploadFile(projectId, itemId, file);
+  e.target.value = '';
+}
+
+async function uploadFile(projectId, itemId, file) {
+  const listEl = document.getElementById('attlist-'+itemId);
+  const uploading = document.createElement('div');
+  uploading.className = 'att-uploading';
+  uploading.textContent = `Uploading ${file.name}...`;
+  listEl?.appendChild(uploading);
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(API_BASE + `/api/project/${projectId}/backlog/${itemId}/attachments`, {method:'POST', body: fd});
+    const data = await res.json();
+    uploading.remove();
+    if (data.ok) {
+      openAttPanels.add(itemId);
+      await refreshSilent();
+    }
+  } catch(err) {
+    uploading.textContent = 'Upload failed';
+    setTimeout(() => uploading.remove(), 3000);
+  }
+}
+
+async function deleteAttachment(e, projectId, itemId, attId) {
+  e.stopPropagation();
+  if (!confirm('Remove this attachment?')) return;
+  openAttPanels.add(itemId);
+  await fetch(API_BASE + `/api/project/${projectId}/backlog/${itemId}/attachments/${attId}`, {method:'DELETE'});
+  await refreshSilent();
+}
+
+// ── Feed ────────────────────────────────────────────────────────────────────
+
+function renderFeed() {
+  const entries = [];
+  allProjects.forEach(p => {
+    (p.activity_log||[]).forEach(e => entries.push({...e, project: p.name||p.id, domain: p.domain}));
+  });
+  entries.sort((a,b) => (b.ts||'').localeCompare(a.ts||''));
+  const colors = {trading:'var(--accent)', infra:'var(--purple-text)', hobby:'var(--amber-text)'};
+  document.getElementById('feed-entries').innerHTML = entries.slice(0,40).map(e => `
+    <div class="feed-entry">
+      <div class="feed-entry-project" style="color:${colors[e.domain]||'var(--text-dim)'}">${esc(e.project)}</div>
+      <div class="feed-entry-msg">${esc(e.msg||'')}</div>
+      <div class="feed-entry-ts">${esc(e.ts_relative||e.ts||'')}</div>
+    </div>`).join('') || '<div class="loading">No activity</div>';
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+async function refreshSilent() {
+  const res = await fetch(API_BASE + '/api/projects');
+  allProjects = await res.json();
+  applyOrder();
+  render();
+  refreshModal();
+}
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Agent Panel ─────────────────────────────────────────────────────────────
+
+let agentEventSources = {};   // session_id → EventSource
+let sseRetryCount = {};       // session_id → number of consecutive reconnect attempts
+let agentOutputBuffers = {};   // session_id → string[]
+let agentStatusCache = {};     // session_id → {status, task, projectId, startedAt}
+let agentHistory = [];         // [{projectId, sessionId, projectName, task, status, startedAt}]
+let activeAgentTab = {};       // project_id → session_id (which tab is active in modal)
+let agentPendingImages = {};   // key (projectId or sessionId) → [{file, objectUrl, serverPath}]
+let acOpenSessions = new Set(); // session_id → expanded in console
+let acExpanded = false;
+let planViewerContent = {};    // session_id → string[] of raw plan text lines
+
+function getProjectSessions(projectId) {
+  return agentHistory.filter(h => h.projectId === projectId);
+}
+
+function agentPanelHTML(p) {
+  const pp = p.project_path || '';
+  if (!pp) {
+    return `<div class="agent-panel">
+      <div class="section-title">Agent</div>
+      <div class="agent-disabled">Set project_path to enable agent dispatch</div>
+    </div>`;
+  }
+
+  const sessions = getProjectSessions(p.id);
+  const activeSessionId = activeAgentTab[p.id];
+  const activeSession = activeSessionId ? agentStatusCache[activeSessionId] : null;
+  const st = activeSession ? (activeSession.status || 'idle') : 'idle';
+  const isRunning = st === 'running';
+
+  // Tab bar
+  const tabsHTML = sessions.map(h => {
+    const isActive = h.sessionId === activeSessionId;
+    const label = (h.task || '').substring(0, 30) || 'Session';
+    return `<div class="agent-tab ${isActive ? 'active' : ''}" onclick="switchAgentTab('${esc(p.id)}','${esc(h.sessionId)}')" title="${esc(h.task)}">
+      <span class="agent-status-dot ${h.status}"></span>
+      <span class="agent-tab-label">${esc(label)}</span>
+      <button class="agent-tab-close" onclick="event.stopPropagation();closeAgentTab('${esc(p.id)}','${esc(h.sessionId)}')" title="Close tab">&#10005;</button>
+    </div>`;
+  }).join('');
+
+  const tabBar = sessions.length > 0
+    ? `<div class="agent-tab-bar">${tabsHTML}<button class="agent-tab-new" onclick="newAgentTab('${esc(p.id)}')">+ New</button></div>`
+    : '';
+
+  // Dispatch row (always visible)
+  const dispatchPreviews = renderAgentImagePreviews(p.id);
+  const dispatchRow = `<div class="agent-input-row">
+    <textarea spellcheck="true" class="agent-task-input" id="agent-task-${esc(p.id)}" rows="1"
+      placeholder="Describe a task for the agent... (paste screenshots here)"
+      onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();dispatchAgent('${esc(p.id)}')}"
+      onpaste="handleAgentPaste(event,'${esc(p.id)}')"
+    ></textarea>
+    <button class="btn-dispatch" onclick="dispatchAgent('${esc(p.id)}')">Dispatch</button>
+  </div>
+  ${dispatchPreviews}`;
+
+  // Active tab content
+  let tabContent = '';
+  if (activeSession && activeSessionId) {
+    const outputLines = (() => {
+      const buf = (agentOutputBuffers[activeSessionId] || []).flatMap(l => l.split('\n'));
+      let result = '';
+      let tableLines = [];
+      let planBlock = '';   // accumulates non-tool lines for plan detection
+      let planRawLines = []; // raw text for plan viewer
+      function flushTable() {
+        if (tableLines.length === 0) return;
+        if (isPipeTable(tableLines)) {
+          planBlock += `<div class="hl-table">${buildPipeTable(tableLines)}</div>`;
+        } else {
+          planBlock += `<div class="hl-table-pre">${tableLines.map(l => formatTableLine(esc(l))).join('\n')}</div>`;
+        }
+        tableLines = [];
+      }
+      for (const line of buf) {
+        // Plan detection: when ExitPlanMode is hit, collapse prior non-tool lines
+        if (line.trim() === '[tool: ExitPlanMode]') {
+          flushTable();
+          if (planRawLines.length >= 2) {
+            planViewerContent[activeSessionId] = planRawLines;
+            result += `<button class="plan-show-btn" onclick="openPlanViewer('${esc(activeSessionId)}')">&#128196; Show Plan</button>`;
+            result += `<div class="plan-hidden-block">${planBlock}</div>`;
+          } else {
+            result += planBlock;
+          }
+          planBlock = ''; planRawLines = [];
+          const cls = agentLineCls(line);
+          result += `<div class="${cls}">${esc(line)}</div>`;
+          continue;
+        }
+        if (isTableLine(line)) {
+          tableLines.push(line);
+          planRawLines.push(line);
+        } else if (tableLines.length > 0 && line.trim() === '') {
+          tableLines.push(line);
+          planRawLines.push(line);
+        } else {
+          flushTable();
+          const cls = agentLineCls(line);
+          const html = cls.includes('agent-line-tool') || cls.includes('agent-line-error') || cls.includes('agent-line-followup') || cls.includes('agent-line-queued') || cls.includes('agent-line-prompt')
+            ? esc(line) : formatAgentText(line);
+          const div = `<div class="${cls}">${html}</div>`;
+          // Tool lines reset plan block accumulator
+          if (cls.includes('agent-line-tool') || cls.includes('agent-line-prompt')) {
+            result += planBlock + div;
+            planBlock = ''; planRawLines = [];
+          } else {
+            planBlock += div;
+            planRawLines.push(line);
+          }
+        }
+      }
+      flushTable();
+      result += planBlock; // flush any remaining non-plan text
+      return result;
+    })();
+
+    const stopBtn = isRunning
+      ? `<button class="btn-stop" onclick="stopAgent('${esc(p.id)}','${esc(activeSessionId)}')">Stop</button>` : '';
+
+    const followupPreviews = renderAgentImagePreviews('fu_' + activeSessionId);
+    const chatInput = (st === 'running' || st === 'completed' || st === 'stopped')
+      ? `<div class="agent-chat-input">
+          ${followupPreviews}
+          <div class="agent-chat-input-row">
+            <textarea spellcheck="true" class="agent-task-input" id="agent-followup-${esc(activeSessionId)}" rows="1"
+              placeholder="Send follow-up... (paste screenshots here)"
+              onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();sendFollowup('${esc(p.id)}','${esc(activeSessionId)}')}"
+              onpaste="handleAgentPaste(event,'fu_${esc(activeSessionId)}')"
+            ></textarea>
+            <button class="btn-dispatch" onclick="sendFollowup('${esc(p.id)}','${esc(activeSessionId)}')">Send</button>
+          </div>
+        </div>` : '';
+
+    const planFileBtn = activeSession && activeSession.planFile
+      ? (() => {
+          const fname = activeSession.planFile.split(/[/\\]/).pop();
+          return `<button class="btn-plan-file" onclick="openPlanFileViewer('${esc(p.id)}','${esc(activeSessionId)}')" title="Open ${esc(fname)}">&#128196; ${esc(fname)}</button>`;
+        })()
+      : '';
+    tabContent = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <span class="agent-status-dot ${st}"></span>
+        <span class="agent-status-label ${st}">${st}</span>
+        ${stopBtn}
+        <span class="agent-activity" id="agent-activity-${esc(activeSessionId)}"></span>
+        <span id="plan-file-btn-${esc(activeSessionId)}">${planFileBtn}</span>
+        <button class="btn-popout" onclick="openPlanViewer('${esc(activeSessionId)}')" title="Open output in viewer window">Pop Out &#8599;</button>
+      </div>
+      <div class="agent-chat">
+        <div class="agent-chat-resize"></div>
+        <div class="agent-output" id="agent-output-${esc(activeSessionId)}">${outputLines}</div>
+        ${chatInput}
+      </div>`;
+  }
+
+  return `<div class="agent-panel">
+    <div class="agent-panel-header">
+      <div class="section-title" style="margin-bottom:0">Agent</div>
+    </div>
+    ${tabBar}
+    ${tabContent}
+    ${dispatchRow}
+  </div>`;
+}
+
+function switchAgentTab(projectId, sessionId) {
+  activeAgentTab[projectId] = sessionId;
+  refreshModal();
+}
+
+function newAgentTab(projectId) {
+  // Clear active tab so the panel shows just the dispatch input
+  delete activeAgentTab[projectId];
+  refreshModal();
+  setTimeout(() => document.getElementById(`agent-task-${projectId}`)?.focus(), 50);
+}
+
+function closeAgentTab(projectId, sessionId) {
+  // Close EventSource immediately
+  if (agentEventSources[sessionId]) {
+    agentEventSources[sessionId].close();
+    delete agentEventSources[sessionId];
+  }
+
+  // Kill process + remove session from backend
+  fetch(API_BASE + `/api/project/${projectId}/agent/session`, {
+    method: 'DELETE',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ session_id: sessionId })
+  }).catch(() => {});
+
+  // Remove from frontend state
+  delete agentStatusCache[sessionId];
+  delete agentOutputBuffers[sessionId];
+  agentHistory = agentHistory.filter(h => h.sessionId !== sessionId);
+  acOpenSessions.delete(sessionId);
+
+  // Switch to next available tab
+  const remaining = getProjectSessions(projectId);
+  if (remaining.length > 0) {
+    activeAgentTab[projectId] = remaining[0].sessionId;
+  } else {
+    delete activeAgentTab[projectId];
+  }
+  refreshModal();
+  renderAgentConsole();
+}
+
+async function dispatchAgent(projectId) {
+  const input = document.getElementById(`agent-task-${projectId}`);
+  const task = input.value.trim();
+  if (!task) { input.focus(); return; }
+  input.value = '';
+
+  // Upload any pasted images and build final task
+  const imagePaths = await uploadAgentImages(projectId);
+  const fullTask = buildTaskWithImages(task, imagePaths);
+  clearAgentImages(projectId);
+
+  try {
+    const res = await fetch(API_BASE + `/api/project/${projectId}/agent/dispatch`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ task: fullTask })
+    });
+    const data = await res.json();
+    if (!data.ok) { alert(data.error || 'Dispatch failed'); return; }
+    const sessionId = data.session_id;
+    const pName = (allProjects.find(x => x.id === projectId) || {}).name || projectId;
+
+    agentOutputBuffers[sessionId] = [`> ${task}`];
+    agentStatusCache[sessionId] = { status: 'running', task, projectId, startedAt: new Date().toISOString() };
+    agentHistory.unshift({ projectId, sessionId, projectName: pName, task, status: 'running', startedAt: new Date().toISOString() });
+    activeAgentTab[projectId] = sessionId;
+
+    refreshModal();
+    renderAgentConsole();
+    connectAgentStream(projectId, sessionId);
+  } catch(e) {
+    alert('Failed to dispatch: ' + e.message);
+  }
+}
+
+function connectAgentStream(projectId, sessionId) {
+  if (agentEventSources[sessionId]) {
+    agentEventSources[sessionId].close();
+  }
+
+  const es = new EventSource(API_BASE + `/api/project/${projectId}/agent/stream?session=${sessionId}`);
+  agentEventSources[sessionId] = es;
+
+  es.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'output') {
+        sseRetryCount[sessionId] = 0;  // successful data — reset retry counter
+        if (!agentOutputBuffers[sessionId]) agentOutputBuffers[sessionId] = [];
+        agentOutputBuffers[sessionId].push(msg.text);
+        appendAgentLine(sessionId, msg.text);
+        updateConsoleOutput(sessionId);
+        // Update live activity ticker for tool lines
+        if (msg.text && msg.text.startsWith('[tool:')) {
+          for (const id of [`agent-activity-${sessionId}`, `ac-activity-${sessionId}`]) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = msg.text;
+          }
+        } else if (msg.text && !msg.text.startsWith('[') && !msg.text.startsWith('\n---')) {
+          // Text output — clear activity (agent is now responding)
+          for (const id of [`agent-activity-${sessionId}`, `ac-activity-${sessionId}`]) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '';
+          }
+        }
+      } else if (msg.type === 'status') {
+        if (agentStatusCache[sessionId]) agentStatusCache[sessionId].status = msg.status;
+        updateHistoryStatus(sessionId, msg.status);
+        es.close();
+        delete agentEventSources[sessionId];
+        delete sseRetryCount[sessionId];
+        delete agentLogCache[projectId];  // invalidate so fresh data (with claude_session_id) loads
+        if (agentLogOpen[projectId]) loadAgentLog(projectId);  // re-fetch if panel is open
+        refreshModal();
+        renderAgentConsole();
+        refreshSilent();
+      } else if (msg.type === 'error') {
+        if (agentStatusCache[sessionId]) agentStatusCache[sessionId].status = 'error';
+        updateHistoryStatus(sessionId, 'error');
+        es.close();
+        delete agentEventSources[sessionId];
+        delete sseRetryCount[sessionId];
+        delete agentLogCache[projectId];  // invalidate so fresh data loads
+        if (agentLogOpen[projectId]) loadAgentLog(projectId);  // re-fetch if panel is open
+        refreshModal();
+        renderAgentConsole();
+      }
+    } catch(e) {}
+  };
+
+  es.onerror = () => {
+    es.close();
+    delete agentEventSources[sessionId];
+    const cached = agentStatusCache[sessionId];
+    if (cached && cached.status === 'running') {
+      const retries = (sseRetryCount[sessionId] || 0) + 1;
+      sseRetryCount[sessionId] = retries;
+      if (retries <= 3) {
+        // Retry with increasing delay
+        setTimeout(() => connectAgentStream(projectId, sessionId), retries * 2000);
+      } else {
+        // Too many retries — server likely lost the session
+        cached.status = 'error';
+        const hist = agentHistory.find(h => h.sessionId === sessionId);
+        if (hist) hist.status = 'error';
+        delete sseRetryCount[sessionId];
+        refreshModal();
+        renderAgentConsole();
+        refreshSilent();
+      }
+    }
+  };
+}
+
+// ── Rich text formatting for agent output ────────────────────────────────────
+function formatAgentText(raw) {
+  // Already escaped by esc() before calling — we operate on safe HTML
+  let t = esc(raw);
+
+  // Code fence blocks (``` ... ```)
+  if (t.match(/^```/)) {
+    return `<span class="hl-codeblock">${t.replace(/^```\w*/, '').replace(/```$/, '')}</span>`;
+  }
+
+  // Markdown headers: ## Heading, ### Heading
+  if (t.match(/^#{1,4}\s/)) {
+    return `<span class="hl-h">${t}</span>`;
+  }
+
+  // Numbered list items: 1. item, 2. item
+  t = t.replace(/^(\d+\.)\s/, '<span class="hl-num">$1</span> ');
+
+  // Bullet points: - item, * item
+  t = t.replace(/^([-*])\s/, '<span class="hl-bullet">$1</span> ');
+
+  // Inline code: `something`
+  t = t.replace(/`([^`]+)`/g, '<span class="hl-code">$1</span>');
+
+  // Bold: **text**
+  t = t.replace(/\*\*([^*]+)\*\*/g, '<span class="hl-bold">$1</span>');
+
+  // File paths: word.ext patterns (common code file extensions)
+  t = t.replace(/(?<![&\w])([A-Za-z_][\w.-]*\.(py|js|ts|tsx|jsx|html|css|json|md|yml|yaml|toml|rs|go|java|c|cpp|h|sh|sql|vue|svelte|rb|php))(?![&\w])/g,
+    '<span class="hl-path">$1</span>');
+
+  // Absolute paths: /path/to/file or C:\path\to\file
+  t = t.replace(/((?:\/[\w.-]+){2,}|(?:[A-Z]:\\[\w.-\\]+))/g, '<span class="hl-path">$1</span>');
+
+  // URLs
+  t = t.replace(/(https?:\/\/[^\s<]+)/g, '<span class="hl-url">$1</span>');
+
+  return t;
+}
+
+function isTableLine(text) {
+  // Pipe-delimited table row: | col1 | col2 | or starts/ends with pipe
+  if (/^\s*\|.*\|/.test(text)) return true;
+  // Separator lines: +---+---+, +===+===+, |---|---|
+  if (/^\s*[+|][-=]+[+|]/.test(text)) return true;
+  // Unicode box drawing: ┌─┬─┐, ├─┼─┤, └─┴─┘, │ etc
+  if (/[┌┐└┘├┤┬┴┼─│═║╔╗╚╝╠╣╦╩╬]/.test(text)) return true;
+  return false;
+}
+
+function formatTableLine(escaped) {
+  // Colorize pipes and border characters (for box-drawing / non-pipe tables)
+  return escaped
+    .replace(/([│|])/g, '<span class="table-pipe">$1</span>')
+    .replace(/([┌┐└┘├┤┬┴┼─═║╔╗╚╝╠╣╦╩╬+])/g, '<span class="table-border">$1</span>');
+}
+
+function isPipeTable(lines) {
+  // True if at least one line has pipe-delimited columns (not just box-drawing)
+  return lines.some(l => /^\s*\|[^┌┐└┘├┤┬┴┼─│═║╔╗╚╝╠╣╦╩╬]*\|/.test(l));
+}
+
+function isSeparatorLine(text) {
+  return /^\s*\|?[-=|:+\s]+\|?\s*$/.test(text) && /[-=]{2,}/.test(text);
+}
+
+function buildPipeTable(rawLines) {
+  // Parse pipe-delimited lines into HTML <table>
+  const dataRows = [];
+  let headerIdx = -1;
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i].trim();
+    if (!line) continue;
+    if (isSeparatorLine(line)) {
+      // The row before the first separator is the header
+      if (headerIdx < 0 && dataRows.length > 0) headerIdx = dataRows.length - 1;
+      continue;
+    }
+    // Split by pipe, trim each cell
+    const cells = line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+    dataRows.push(cells);
+  }
+  if (dataRows.length === 0) return '';
+  // If we found a header separator, first row is header
+  const hasHeader = headerIdx === 0;
+  let html = '<table>';
+  dataRows.forEach((cells, i) => {
+    const tag = (hasHeader && i === 0) ? 'th' : 'td';
+    html += '<tr>' + cells.map(c => `<${tag}>${esc(c)}</${tag}>`).join('') + '</tr>';
+  });
+  html += '</table>';
+  return html;
+}
+
+function agentLineCls(text) {
+  const t = text.trim();
+  if (t.startsWith('> [queued]')) return 'agent-line agent-line-queued';
+  if (t.startsWith('> ')) return 'agent-line agent-line-prompt';
+  if (t.startsWith('[tool:')) return 'agent-line agent-line-tool';
+  if (t.startsWith('[') && t.endsWith(']')) return 'agent-line agent-line-status';
+  if (t.startsWith('[exited') || t.startsWith('[stream error')) return 'agent-line agent-line-error';
+  return 'agent-line';
+}
+
+function collapseIntoPlanButton(sessionId, container) {
+  // Walk backwards from end, collecting non-tool text lines until we hit a [tool:] line
+  const children = Array.from(container.children);
+  const planLines = [];
+  const planElements = [];
+
+  for (let i = children.length - 1; i >= 0; i--) {
+    const child = children[i];
+    const txt = (child.textContent || '').trim();
+    // Stop at tool lines, prompt lines, or existing plan buttons
+    if (child.classList.contains('agent-line-tool') ||
+        child.classList.contains('agent-line-prompt') ||
+        child.classList.contains('plan-show-btn')) break;
+    // Skip the ExitPlanMode tool line itself (already handled above)
+    if (txt === '[tool: ExitPlanMode]') continue;
+    planLines.unshift(child.textContent || child.innerText || '');
+    planElements.unshift(child);
+  }
+
+  if (planLines.length < 2) return; // Too few lines, not a real plan
+
+  // Store plan content
+  planViewerContent[sessionId] = planLines;
+
+  // Wrap plan elements in a hidden container
+  const wrapper = document.createElement('div');
+  wrapper.className = 'plan-hidden-block';
+  wrapper.dataset.sessionId = sessionId;
+  const insertBefore = planElements[0];
+  container.insertBefore(wrapper, insertBefore);
+  for (const el of planElements) wrapper.appendChild(el);
+
+  // Insert "Show Plan" button before the hidden block
+  const btn = document.createElement('button');
+  btn.className = 'plan-show-btn';
+  btn.innerHTML = '&#128196; Show Plan';
+  btn.onclick = () => openPlanViewer(sessionId);
+  container.insertBefore(btn, wrapper);
+}
+
+function appendAgentLine(sessionId, text) {
+  const el = document.getElementById(`agent-output-${sessionId}`);
+  if (!el) return;
+  el.style.display = 'block';
+
+  // Split multi-line text blocks into individual lines
+  if (text.includes('\n')) {
+    for (const line of text.split('\n')) {
+      appendAgentLine(sessionId, line);
+    }
+    return;
+  }
+
+  // Group consecutive table lines into a single styled block
+  if (isTableLine(text)) {
+    let block = el.lastElementChild;
+    if (block && (block.classList.contains('hl-table') || block.classList.contains('hl-table-pre'))) {
+      block._rawLines.push(text);
+    } else {
+      block = document.createElement('div');
+      block._rawLines = [text];
+      el.appendChild(block);
+    }
+    // Rebuild: pipe tables get <table>, box-drawing stays pre-formatted
+    if (isPipeTable(block._rawLines)) {
+      block.className = 'hl-table';
+      block.innerHTML = buildPipeTable(block._rawLines);
+    } else {
+      block.className = 'hl-table-pre';
+      block.innerHTML = block._rawLines.map(l => formatTableLine(esc(l))).join('\n');
+    }
+    el.scrollTop = el.scrollHeight;
+    return;
+  }
+  // Blank lines inside a table: keep them in the table block
+  if (text.trim() === '') {
+    const last = el.lastElementChild;
+    if (last && (last.classList.contains('hl-table') || last.classList.contains('hl-table-pre'))) {
+      last._rawLines.push(text);
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+  }
+
+  const div = document.createElement('div');
+  const cls = agentLineCls(text);
+  div.className = cls;
+  // Use rich formatting for regular text lines, plain for special lines
+  if (cls.includes('agent-line-tool') || cls.includes('agent-line-error') || cls.includes('agent-line-followup') || cls.includes('agent-line-queued') || cls.includes('agent-line-prompt')) {
+    div.textContent = text;
+  } else {
+    div.innerHTML = formatAgentText(text);
+  }
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+
+  // Plan detection: [tool: ExitPlanMode] signals end of plan
+  if (text.trim() === '[tool: ExitPlanMode]') {
+    collapseIntoPlanButton(sessionId, el);
+    // Check for plan file and inject button
+    const cached = agentStatusCache[sessionId];
+    if (cached && cached.projectId) {
+      fetch(API_BASE + `/api/project/${cached.projectId}/agent/status`)
+        .then(r => r.json())
+        .then(data => {
+          const s = (data.sessions || []).find(x => x.session_id === sessionId);
+          if (s && s.plan_file) {
+            cached.planFile = s.plan_file;
+            const container = document.getElementById(`plan-file-btn-${sessionId}`);
+            if (container && !container.innerHTML.trim()) {
+              const fname = s.plan_file.split(/[/\\]/).pop();
+              container.innerHTML = `<button class="btn-plan-file" onclick="openPlanFileViewer('${esc(cached.projectId)}','${esc(sessionId)}')" title="Open ${esc(fname)}">&#128196; ${esc(fname)}</button>`;
+            }
+          }
+        }).catch(() => {});
+    }
+  }
+}
+
+async function sendFollowup(projectId, sessionId) {
+  const input = document.getElementById(`agent-followup-${sessionId}`);
+  const message = input.value.trim();
+  if (!message) { input.focus(); return; }
+  input.value = '';
+
+  // Upload any pasted images and build final message
+  const imageKey = 'fu_' + sessionId;
+  const imagePaths = await uploadAgentImages(imageKey);
+  const fullMessage = buildTaskWithImages(message, imagePaths);
+  clearAgentImages(imageKey);
+
+  try {
+    const res = await fetch(API_BASE + `/api/project/${projectId}/agent/followup`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ message: fullMessage, session_id: sessionId })
+    });
+    const data = await res.json();
+    if (!data.ok) { alert(data.error || 'Follow-up failed'); return; }
+    if (data.queued) {
+      // Follow-up queued — will be sent after current task completes
+      // SSE is still connected and will stream the queued confirmation
+      return;
+    }
+    if (agentStatusCache[sessionId]) agentStatusCache[sessionId].status = 'running';
+    updateHistoryStatus(sessionId, 'running');
+    refreshModal();
+    renderAgentConsole();
+    connectAgentStream(projectId, sessionId);
+  } catch(e) {
+    alert('Failed to send follow-up: ' + e.message);
+  }
+}
+
+async function stopAgent(projectId, sessionId) {
+  try {
+    await fetch(API_BASE + `/api/project/${projectId}/agent/stop`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ session_id: sessionId })
+    });
+    if (agentStatusCache[sessionId]) agentStatusCache[sessionId].status = 'stopped';
+    updateHistoryStatus(sessionId, 'stopped');
+    if (agentEventSources[sessionId]) {
+      agentEventSources[sessionId].close();
+      delete agentEventSources[sessionId];
+    }
+    refreshModal();
+    renderAgentConsole();
+    refreshSilent();
+  } catch(e) {}
+}
+
+// Fetch all agent sessions for a project on modal open / page boot
+async function fetchAgentStatus(projectId) {
+  try {
+    const res = await fetch(API_BASE + `/api/project/${projectId}/agent/status`);
+    const data = await res.json();
+    const sessions = data.sessions || [];
+    const pName = (allProjects.find(x => x.id === projectId) || {}).name || projectId;
+
+    for (const s of sessions) {
+      const sid = s.session_id;
+      agentStatusCache[sid] = { status: s.status, task: s.task, projectId, startedAt: s.started_at, planFile: s.plan_file || '' };
+      if (s.log_lines && s.log_lines.length > 0) {
+        agentOutputBuffers[sid] = s.log_lines;
+      }
+      if (!agentHistory.find(h => h.sessionId === sid)) {
+        agentHistory.unshift({ projectId, sessionId: sid, projectName: pName, task: s.task || '', status: s.status, startedAt: s.started_at || '' });
+      }
+      if (s.status === 'running') {
+        connectAgentStream(projectId, sid);
+      }
+    }
+    // Set active tab to most recent running, or first session
+    if (sessions.length > 0 && !activeAgentTab[projectId]) {
+      const running = sessions.find(s => s.status === 'running');
+      activeAgentTab[projectId] = running ? running.session_id : sessions[0].session_id;
+    }
+    if (sessions.length > 0) renderAgentConsole();
+  } catch(e) {}
+}
+
+// ── Agent Log Panel ──────────────────────────────────────────────────────────
+
+let agentLogCache = {};  // project_id → entries[]
+let agentLogOpen = {};   // project_id → bool
+
+function agentLogPanelHTML(p) {
+  if (!p.project_path) return '';
+  const isOpen = agentLogOpen[p.id] || false;
+  const entries = agentLogCache[p.id] || [];
+
+  const entriesHTML = entries.length === 0
+    ? '<div class="agent-log-empty">No completed sessions yet</div>'
+    : entries.map(e => {
+      const csid = e.claude_session_id || '';
+      const eid = e.session_id || csid;
+      return `
+      <div class="agent-log-entry status-${e.status || 'completed'}">
+        <div class="agent-log-task">
+          <span class="agent-status-dot ${e.status || 'completed'}"></span>
+          ${esc((e.task || '').substring(0, 100))}
+          ${csid ? `<button class="agent-log-continue-btn" onclick="toggleContinueInput('${esc(p.id)}','${esc(eid)}','${esc(csid)}')">Continue</button>` : ''}
+        </div>
+        <div class="agent-log-summary">${esc(e.summary || '')}</div>
+        <div class="agent-log-ts">${esc(e.ts_relative || e.ts || '')} &middot; started ${esc(e.started_relative || e.started_at || '')}</div>
+        ${csid ? `<div class="agent-log-session-id">claude -r <code title="Click to copy">${esc(csid)}</code><span class="copy-sid" onclick="navigator.clipboard.writeText('${esc(csid)}');this.textContent='copied!';setTimeout(()=>this.textContent='copy',1200)" title="Copy session ID">copy</span></div>` : ''}
+        ${csid ? `<div class="agent-log-continue-input" id="continue-input-${esc(eid)}">
+          <textarea id="continue-msg-${esc(eid)}" rows="2" placeholder="What should the agent continue with?" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();dispatchContinue('${esc(p.id)}','${esc(eid)}','${esc(csid)}')}"></textarea>
+          <button class="btn-send" onclick="dispatchContinue('${esc(p.id)}','${esc(eid)}','${esc(csid)}')">Send</button>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+
+  return `<div class="card-section">
+    <div class="section-title">Completed Sessions</div>
+    ${entriesHTML}
+  </div>`;
+}
+
+async function toggleAgentLog(projectId) {
+  const body = document.getElementById(`agent-log-body-${projectId}`);
+  const chevron = document.getElementById(`agent-log-chevron-${projectId}`);
+  if (!body) return;
+
+  const isOpen = body.classList.contains('open');
+  agentLogOpen[projectId] = !isOpen;
+  body.classList.toggle('open');
+  chevron?.classList.toggle('open');
+
+  if (!isOpen) {
+    await loadAgentLog(projectId);  // always re-fetch on open for fresh data
+  }
+}
+
+async function loadAgentLog(projectId) {
+  try {
+    const res = await fetch(API_BASE + `/api/project/${projectId}/agent/log`);
+    agentLogCache[projectId] = await res.json();
+    refreshModal();
+  } catch(e) {}
+}
+
+// ── Agent Log continue ───────────────────────────────────────────────────────
+
+function toggleContinueInput(projectId, entryId, claudeSessionId) {
+  const el = document.getElementById(`continue-input-${entryId}`);
+  if (!el) return;
+  const isOpen = el.classList.contains('open');
+  document.querySelectorAll('.agent-log-continue-input.open').forEach(x => x.classList.remove('open'));
+  if (!isOpen) {
+    el.classList.add('open');
+    setTimeout(() => document.getElementById(`continue-msg-${entryId}`)?.focus(), 50);
+  }
+}
+
+async function dispatchContinue(projectId, entryId, claudeSessionId) {
+  const input = document.getElementById(`continue-msg-${entryId}`);
+  const task = input.value.trim();
+  if (!task) { input.focus(); return; }
+  input.value = '';
+
+  try {
+    const res = await fetch(API_BASE + `/api/project/${projectId}/agent/dispatch`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ task, resume_conversation_id: claudeSessionId })
+    });
+    const data = await res.json();
+    if (!data.ok) { alert(data.error || 'Continue failed'); return; }
+    const sessionId = data.session_id;
+    const pName = (allProjects.find(x => x.id === projectId) || {}).name || projectId;
+
+    agentOutputBuffers[sessionId] = [`> [continuing conversation] ${task}`];
+    agentStatusCache[sessionId] = { status: 'running', task, projectId, startedAt: new Date().toISOString() };
+    agentHistory.unshift({ projectId, sessionId, projectName: pName, task, status: 'running', startedAt: new Date().toISOString() });
+    activeAgentTab[projectId] = sessionId;
+
+    modalActiveTab[projectId] = 'agent';
+    refreshModal();
+    renderAgentConsole();
+    connectAgentStream(projectId, sessionId);
+  } catch(e) {
+    alert('Failed to continue: ' + e.message);
+  }
+}
+
+// ── Agent image paste ────────────────────────────────────────────────────────
+
+function handleAgentPaste(e, key) {
+  const items = Array.from(e.clipboardData?.items || []);
+  const imageItems = items.filter(i => i.type.startsWith('image/'));
+  if (imageItems.length === 0) return;
+  e.preventDefault();
+  const list = agentPendingImages[key] || [];
+  for (const item of imageItems) {
+    const blob = item.getAsFile();
+    if (blob) {
+      list.push({ file: blob, objectUrl: URL.createObjectURL(blob), serverPath: null });
+    }
+  }
+  agentPendingImages[key] = list;
+  refreshModal();
+}
+
+function renderAgentImagePreviews(key) {
+  const list = agentPendingImages[key] || [];
+  if (list.length === 0) return '';
+  return `<div class="agent-image-previews">${list.map((img, i) => `
+    <div class="agent-image-preview">
+      <img src="${img.objectUrl}" alt="paste">
+      <button class="create-preview-remove" onclick="removeAgentImage('${esc(key)}',${i})">&#10005;</button>
+    </div>`).join('')}</div>`;
+}
+
+function removeAgentImage(key, index) {
+  const list = agentPendingImages[key] || [];
+  if (list[index]) URL.revokeObjectURL(list[index].objectUrl);
+  list.splice(index, 1);
+  if (list.length === 0) delete agentPendingImages[key];
+  refreshModal();
+}
+
+async function uploadAgentImages(key) {
+  const list = agentPendingImages[key] || [];
+  const paths = [];
+  for (const img of list) {
+    if (img.serverPath) { paths.push(img.serverPath); continue; }
+    const fd = new FormData();
+    fd.append('file', img.file, img.file.name || 'screenshot.png');
+    try {
+      const res = await fetch(API_BASE + '/api/agent/upload-image', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.ok) { img.serverPath = data.path; paths.push(data.path); }
+    } catch(e) {}
+  }
+  return paths;
+}
+
+function buildTaskWithImages(task, imagePaths) {
+  if (imagePaths.length === 0) return task;
+  const refs = imagePaths.map(p => `[Screenshot: ${p}]`).join('\n');
+  return `${task}\n\n${refs}`;
+}
+
+function clearAgentImages(key) {
+  const list = agentPendingImages[key] || [];
+  for (const img of list) URL.revokeObjectURL(img.objectUrl);
+  delete agentPendingImages[key];
+}
+
+// ── Rules Panel ─────────────────────────────────────────────────────────────
+
+let rulesLoaded = {}; // project_id → {agent_rules, shared_rules}
+
+function rulesPanelHTML(p) {
+  const pp = p.project_path || '';
+  if (!pp) return '';
+
+  const loaded = rulesLoaded[p.id];
+  const hasContent = loaded && (loaded.agent_rules || loaded.shared_rules);
+
+  return `<div class="rules-panel">
+    <div class="rules-toggle" onclick="toggleRulesPanel('${esc(p.id)}')">
+      <div class="section-title" style="margin-bottom:0">Rules</div>
+      <span class="rules-chevron" id="rules-chevron-${esc(p.id)}">&#9654;</span>
+    </div>
+    <div class="rules-body" id="rules-body-${esc(p.id)}">
+      <div class="rules-label">Agent Rules (AGENT_RULES.md)</div>
+      <textarea spellcheck="true" class="rules-textarea" id="rules-agent-${esc(p.id)}" rows="6"
+        placeholder="Loading...">${esc(loaded ? loaded.agent_rules : '')}</textarea>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <button class="btn-save-rules" onclick="saveProjectRules('${esc(p.id)}')">Save Agent Rules</button>
+        <span class="rules-saved" id="rules-saved-agent-${esc(p.id)}">Saved</span>
+      </div>
+      <div class="rules-label" style="margin-top:14px">Shared Baseline (SHARED_RULES.md)</div>
+      <textarea spellcheck="true" class="rules-textarea" id="rules-shared-${esc(p.id)}" rows="6"
+        placeholder="Loading...">${esc(loaded ? loaded.shared_rules : '')}</textarea>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <button class="btn-save-rules" onclick="saveSharedRules('${esc(p.id)}')">Save Shared Rules</button>
+        <span class="rules-saved" id="rules-saved-shared-${esc(p.id)}">Saved</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function toggleRulesPanel(projectId) {
+  const body = document.getElementById(`rules-body-${projectId}`);
+  const chevron = document.getElementById(`rules-chevron-${projectId}`);
+  if (!body) return;
+
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open');
+  chevron?.classList.toggle('open');
+
+  if (!isOpen && !rulesLoaded[projectId]) {
+    await loadRules(projectId);
+  }
+}
+
+async function loadRules(projectId) {
+  try {
+    const res = await fetch(API_BASE + `/api/project/${projectId}/rules`);
+    const data = await res.json();
+    rulesLoaded[projectId] = data;
+    const agentEl = document.getElementById(`rules-agent-${projectId}`);
+    const sharedEl = document.getElementById(`rules-shared-${projectId}`);
+    if (agentEl) agentEl.value = data.agent_rules || '';
+    if (sharedEl) sharedEl.value = data.shared_rules || '';
+  } catch(e) {}
+}
+
+async function saveProjectRules(projectId) {
+  const el = document.getElementById(`rules-agent-${projectId}`);
+  if (!el) return;
+  try {
+    await fetch(API_BASE + `/api/project/${projectId}/rules`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ agent_rules: el.value })
+    });
+    if (rulesLoaded[projectId]) rulesLoaded[projectId].agent_rules = el.value;
+    flashSaved(`rules-saved-agent-${projectId}`);
+  } catch(e) { alert('Failed to save rules'); }
+}
+
+async function saveSharedRules(projectId) {
+  const el = document.getElementById(`rules-shared-${projectId}`);
+  if (!el) return;
+  try {
+    await fetch(API_BASE + '/api/rules/shared', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ shared_rules: el.value })
+    });
+    if (rulesLoaded[projectId]) rulesLoaded[projectId].shared_rules = el.value;
+    flashSaved(`rules-saved-shared-${projectId}`);
+  } catch(e) { alert('Failed to save shared rules'); }
+}
+
+function flashSaved(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// ── Agent Console (persistent bottom panel) ─────────────────────────────────
+
+function updateHistoryStatus(sessionId, status) {
+  const entry = agentHistory.find(h => h.sessionId === sessionId);
+  if (entry) entry.status = status;
+}
+
+function toggleAgentConsole() {
+  const el = document.getElementById('agent-console');
+  acExpanded = !acExpanded;
+  el.classList.toggle('collapsed', !acExpanded);
+  el.classList.toggle('expanded', acExpanded);
+  document.body.classList.toggle('console-open', acExpanded);
+  document.body.classList.toggle('console-visible', !acExpanded && !el.classList.contains('hidden'));
+}
+
+function toggleConsoleSession(sessionId) {
+  if (acOpenSessions.has(sessionId)) acOpenSessions.delete(sessionId);
+  else acOpenSessions.add(sessionId);
+  renderAgentConsole();
+}
+
+function renderAgentConsole() {
+  const el = document.getElementById('agent-console');
+  const body = document.getElementById('ac-body');
+  const countEl = document.getElementById('ac-count');
+
+  if (agentHistory.length === 0) {
+    el.classList.add('hidden');
+    document.body.classList.remove('console-open', 'console-visible');
+    return;
+  }
+
+  el.classList.remove('hidden');
+  if (!acExpanded) document.body.classList.add('console-visible');
+
+  const runningCount = agentHistory.filter(h => h.status === 'running').length;
+  countEl.textContent = runningCount > 0 ? `${runningCount} running` : agentHistory.length;
+  countEl.classList.toggle('has-running', runningCount > 0);
+
+  body.innerHTML = agentHistory.map(h => {
+    const isOpen = acOpenSessions.has(h.sessionId);
+    const lines = (agentOutputBuffers[h.sessionId] || []).flatMap(l => l.split('\n'));
+    const outputHTML = (() => {
+      let result = '';
+      let tableLines = [];
+      function flushTable() {
+        if (tableLines.length === 0) return;
+        if (isPipeTable(tableLines)) {
+          result += `<div class="hl-table">${buildPipeTable(tableLines)}</div>`;
+        } else {
+          result += `<div class="hl-table-pre">${tableLines.map(l => formatTableLine(esc(l))).join('\n')}</div>`;
+        }
+        tableLines = [];
+      }
+      for (const l of lines) {
+        if (isTableLine(l)) {
+          tableLines.push(l);
+        } else if (tableLines.length > 0 && l.trim() === '') {
+          tableLines.push(l);
+        } else {
+          flushTable();
+          const cls = agentLineCls(l);
+          const html = cls.includes('agent-line-tool') || cls.includes('agent-line-error') || cls.includes('agent-line-followup') || cls.includes('agent-line-queued') || cls.includes('agent-line-prompt')
+            ? esc(l) : formatAgentText(l);
+          result += `<div class="${cls}">${html}</div>`;
+        }
+      }
+      flushTable();
+      return result;
+    })();
+
+    const stopBtn = h.status === 'running'
+      ? `<button class="ac-stop-btn" onclick="event.stopPropagation();stopAgent('${esc(h.projectId)}','${esc(h.sessionId)}')" title="Stop agent">Stop</button>`
+      : '';
+
+    // Show last tool activity in console header for running sessions
+    const lastTool = h.status === 'running' ? (lines.filter(l => l.startsWith('[tool:')).pop() || '') : '';
+
+    return `<div class="ac-session">
+      <div class="ac-session-header" onclick="toggleConsoleSession('${esc(h.sessionId)}')">
+        <span class="agent-status-dot ${h.status}"></span>
+        <span class="ac-session-project">${esc(h.projectName)}</span>
+        <span class="ac-session-task" title="${esc(h.task)}">${esc(h.task)}</span>
+        ${lastTool ? `<span class="agent-activity" id="ac-activity-${esc(h.sessionId)}">${esc(lastTool)}</span>` : ''}
+        ${stopBtn}
+        <span class="ac-session-time">${h.startedAt ? timeAgoShort(h.startedAt) : ''}</span>
+        <span class="ac-session-chevron ${isOpen ? 'open' : ''}">&#9654;</span>
+      </div>
+      <div class="ac-session-output ${isOpen ? 'open' : ''}" id="ac-output-${esc(h.sessionId)}">${outputHTML}</div>
+    </div>`;
+  }).join('');
+}
+
+function updateConsoleOutput(sessionId) {
+  const el = document.getElementById(`ac-output-${sessionId}`);
+  if (!el) return;
+  const lines = agentOutputBuffers[sessionId] || [];
+  const lastEntry = lines[lines.length - 1];
+  if (!lastEntry) return;
+
+  // Split multi-line text blocks into individual lines
+  const subLines = lastEntry.split('\n');
+  for (const lastLine of subLines) {
+    // Group consecutive table lines into a single styled block
+    if (isTableLine(lastLine)) {
+      let block = el.lastElementChild;
+      if (block && (block.classList.contains('hl-table') || block.classList.contains('hl-table-pre'))) {
+        block._rawLines.push(lastLine);
+      } else {
+        block = document.createElement('div');
+        block._rawLines = [lastLine];
+        el.appendChild(block);
+      }
+      if (isPipeTable(block._rawLines)) {
+        block.className = 'hl-table';
+        block.innerHTML = buildPipeTable(block._rawLines);
+      } else {
+        block.className = 'hl-table-pre';
+        block.innerHTML = block._rawLines.map(l => formatTableLine(esc(l))).join('\n');
+      }
+      continue;
+    }
+    if (lastLine.trim() === '') {
+      const last = el.lastElementChild;
+      if (last && (last.classList.contains('hl-table') || last.classList.contains('hl-table-pre'))) {
+        last._rawLines.push(lastLine);
+        continue;
+      }
+    }
+
+    const div = document.createElement('div');
+    const cls = agentLineCls(lastLine);
+    div.className = cls;
+    if (cls.includes('agent-line-tool') || cls.includes('agent-line-error') || cls.includes('agent-line-followup') || cls.includes('agent-line-queued') || cls.includes('agent-line-prompt')) {
+      div.textContent = lastLine;
+    } else {
+      div.innerHTML = formatAgentText(lastLine);
+    }
+    el.appendChild(div);
+  }
+  el.scrollTop = el.scrollHeight;
+}
+
+function timeAgoShort(ts) {
+  try {
+    const d = new Date(ts);
+    const secs = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (secs < 60) return `${secs}s`;
+    if (secs < 3600) return `${Math.floor(secs/60)}m`;
+    if (secs < 86400) return `${Math.floor(secs/3600)}h`;
+    return `${Math.floor(secs/86400)}d`;
+  } catch { return ''; }
+}
+
+// ── Auto-size name input ─────────────────────────────────────────────────────
+
+function autoSizeNameInput(input) {
+  const measure = document.getElementById('name-measure');
+  measure.textContent = input.value || input.placeholder || '';
+  input.style.width = Math.max(120, measure.offsetWidth + 16) + 'px';
+}
+
+// ── Modal tab switching ─────────────────────────────────────────────────────
+
+function switchModalTab(projectId, tab) {
+  modalActiveTab[projectId] = tab;
+  if (tab === 'agent-log') {
+    loadAgentLog(projectId);
+    return;
+  }
+  refreshModal();
+}
+
+// ── Tab search / filter ─────────────────────────────────────────────────────
+
+function findModalIdForProject(projectId) {
+  for (const [modalId, entry] of openModals) {
+    if (entry.projectId === projectId) return modalId;
+  }
+  return null;
+}
+
+function applyTabFilter(projectId) {
+  const query = (modalSearchQuery[projectId] || '').toLowerCase().trim();
+  const modalId = findModalIdForProject(projectId);
+  if (!modalId) return;
+  const el = openModals.get(modalId).element;
+  const activeTab = modalActiveTab[projectId] || 'backlog';
+
+  if (activeTab === 'backlog') {
+    el.querySelectorAll('.backlog-item').forEach(item => {
+      const text = (item.querySelector('.backlog-text')?.textContent || '').toLowerCase();
+      item.style.display = (!query || text.includes(query)) ? '' : 'none';
+    });
+  } else if (activeTab === 'agent-log') {
+    el.querySelectorAll('.agent-log-entry').forEach(item => {
+      const task = (item.querySelector('.agent-log-task')?.textContent || '').toLowerCase();
+      const summary = (item.querySelector('.agent-log-summary')?.textContent || '').toLowerCase();
+      item.style.display = (!query || task.includes(query) || summary.includes(query)) ? '' : 'none';
+    });
+  } else if (activeTab === 'activity') {
+    el.querySelectorAll('.log-entry').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = (!query || text.includes(query)) ? '' : 'none';
+    });
+  }
+
+  // Toggle clear button without full re-render
+  const searchDiv = el.querySelector('.modal-tab-search');
+  if (searchDiv) {
+    let clearBtn = searchDiv.querySelector('.search-clear');
+    if (query && !clearBtn) {
+      clearBtn = document.createElement('span');
+      clearBtn.className = 'search-clear';
+      clearBtn.innerHTML = '&#x2715;';
+      clearBtn.onclick = () => clearTabSearch(projectId);
+      searchDiv.appendChild(clearBtn);
+    } else if (!query && clearBtn) {
+      clearBtn.remove();
+    }
+  }
+}
+
+function clearTabSearch(projectId) {
+  modalSearchQuery[projectId] = '';
+  const modalId = findModalIdForProject(projectId);
+  if (!modalId) return;
+  const el = openModals.get(modalId).element;
+  const input = el.querySelector('.modal-tab-search input');
+  if (input) { input.value = ''; input.focus(); }
+  applyTabFilter(projectId);
+}
+
+// ── Project Path Editor ──────────────────────────────────────────────────────
+
+async function saveProjectName(projectId, inputEl) {
+  const val = inputEl.value.trim();
+  if (!val) { inputEl.value = allProjects.find(x => x.id === projectId)?.name || projectId; return; }
+  const p = allProjects.find(x => x.id === projectId);
+  if (p && p.name === val) return;
+  try {
+    await fetch(API_BASE + `/api/project/${projectId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name: val })
+    });
+    await refreshSilent();
+  } catch(e) {}
+}
+
+function toggleDomainDropdown(e, projectId) {
+  e.stopPropagation();
+  const dd = document.getElementById(`domain-dd-${projectId}`);
+  if (!dd) return;
+  const isOpen = dd.classList.contains('open');
+  // Close all open dropdowns first
+  document.querySelectorAll('.domain-dropdown.open').forEach(d => d.classList.remove('open'));
+  if (!isOpen) {
+    dd.classList.add('open');
+    // Close on outside click
+    const close = (ev) => {
+      if (!dd.contains(ev.target)) { dd.classList.remove('open'); document.removeEventListener('click', close); }
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  }
+}
+
+async function saveDomain(e, projectId, domain) {
+  e.stopPropagation();
+  document.querySelectorAll('.domain-dropdown.open').forEach(d => d.classList.remove('open'));
+  const p = allProjects.find(x => x.id === projectId);
+  if (p && p.domain === domain) return;
+  try {
+    await fetch(API_BASE + `/api/project/${projectId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ domain })
+    });
+    await refreshSilent();
+  } catch(e) {}
+}
+
+async function saveProjectPath(projectId, inputEl) {
+  const val = inputEl.value.trim();
+  const p = allProjects.find(x => x.id === projectId);
+  if (p && p.project_path === val) return; // no change
+  try {
+    await fetch(API_BASE + `/api/project/${projectId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ project_path: val })
+    });
+    await refreshSilent();
+  } catch(e) {}
+}
+
+async function importFromProject(projectId) {
+  try {
+    const res = await fetch(API_BASE + `/api/project/${projectId}/import`, { method: 'POST' });
+    const data = await res.json();
+    if (!data.ok) { alert(data.error || 'Import failed'); return; }
+    const imp = data.imported || {};
+    const parts = [];
+    if (imp.activity_log) parts.push(`${imp.activity_log} log entries`);
+    if (imp.backlog) parts.push(`${imp.backlog} backlog items`);
+    if (imp.description) parts.push('description');
+    if (imp.current_task) parts.push('current task');
+    alert(parts.length > 0 ? `Imported: ${parts.join(', ')}` : 'No new data found in CHANGELOG.md');
+    await refreshSilent();
+  } catch(e) { alert('Import failed: ' + e.message); }
+}
+
+// ── Shared Rules Editor (Header-level) ──────────────────────────────────────
+
+async function openSharedRulesEditor() {
+  const modalId = '__shared_rules';
+  if (openModals.has(modalId)) {
+    const entry = openModals.get(modalId);
+    if (entry.minimized) restoreModal(modalId);
+    focusModal(modalId);
+    return;
+  }
+
+  const win = document.createElement('div');
+  win.className = 'modal-window';
+  win.dataset.modalId = modalId;
+  const content = document.createElement('div');
+  content.className = 'modal-content';
+  content.innerHTML = `
+    <div class="modal-window-controls">
+      <button class="modal-minimize" onclick="minimizeModal('${modalId}')" title="Minimize">&#x2015;</button>
+      <button class="modal-close" onclick="closeModalById('${modalId}')" title="Close">&#10005;</button>
+    </div>
+    <div class="shared-rules-editor">
+      <h2>Shared Baseline Rules</h2>
+      <div class="rules-hint">SHARED_RULES.md &mdash; applies to all projects</div>
+      <textarea spellcheck="true" class="rules-textarea" id="shared-rules-global" rows="16"
+        placeholder="Loading..."></textarea>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-shrink:0">
+        <button class="btn-save-rules" onclick="saveSharedRulesGlobal()">Save</button>
+        <span class="rules-saved" id="shared-rules-global-saved">Saved</span>
+      </div>
+    </div>`;
+  win.appendChild(content);
+  document.getElementById('modal-layer').appendChild(win);
+
+  const z = nextModalZ++;
+  win.style.zIndex = z;
+  openModals.set(modalId, { projectId: null, element: win, minimized: false, zIndex: z });
+  centerModalElement(win);
+  focusModal(modalId);
+
+  try {
+    const res = await fetch(API_BASE + '/api/rules/shared');
+    const data = await res.json();
+    const el = document.getElementById('shared-rules-global');
+    if (el) el.value = data.shared_rules || '';
+  } catch(e) {}
+}
+
+async function saveSharedRulesGlobal() {
+  const el = document.getElementById('shared-rules-global');
+  if (!el) return;
+  try {
+    await fetch(API_BASE + '/api/rules/shared', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ shared_rules: el.value })
+    });
+    // Update any cached shared rules in rulesLoaded
+    for (const k of Object.keys(rulesLoaded)) {
+      rulesLoaded[k].shared_rules = el.value;
+    }
+    flashSaved('shared-rules-global-saved');
+  } catch(e) { alert('Failed to save shared rules'); }
+}
+
+// ── Plan Viewer ─────────────────────────────────────────────────────────────
+
+function openPlanViewer(sessionId) {
+  const modalId = `__plan_${sessionId}`;
+
+  // If already open, focus it
+  if (openModals.has(modalId)) {
+    const entry = openModals.get(modalId);
+    if (entry.minimized) restoreModal(modalId);
+    focusModal(modalId);
+    return;
+  }
+
+  // Get content: prefer specific plan content, fall back to full output buffer
+  const lines = planViewerContent[sessionId] || agentOutputBuffers[sessionId] || [];
+  const usingFullBuffer = !planViewerContent[sessionId];
+
+  // Determine title from session info
+  const cached = agentStatusCache[sessionId];
+  const taskTitle = cached ? (cached.task || '').substring(0, 80) : 'Agent Output';
+
+  // Render lines with rich formatting (same logic as outputLines builder)
+  const flatLines = lines.flatMap(l => l.split('\n'));
+  let bodyHTML = '';
+  let tableLines = [];
+  function flushTable() {
+    if (tableLines.length === 0) return;
+    if (isPipeTable(tableLines)) {
+      bodyHTML += `<div class="hl-table">${buildPipeTable(tableLines)}</div>`;
+    } else {
+      bodyHTML += `<div class="hl-table-pre">${tableLines.map(l => formatTableLine(esc(l))).join('\n')}</div>`;
+    }
+    tableLines = [];
+  }
+  for (const line of flatLines) {
+    if (isTableLine(line)) {
+      tableLines.push(line);
+    } else if (tableLines.length > 0 && line.trim() === '') {
+      tableLines.push(line);
+    } else {
+      flushTable();
+      const cls = agentLineCls(line);
+      const html = cls.includes('agent-line-tool') || cls.includes('agent-line-error') || cls.includes('agent-line-followup') || cls.includes('agent-line-queued') || cls.includes('agent-line-prompt')
+        ? esc(line) : formatAgentText(line);
+      bodyHTML += `<div class="${cls}">${html}</div>`;
+    }
+  }
+  flushTable();
+
+  const headerLabel = usingFullBuffer ? 'Agent Output' : 'Plan Viewer';
+
+  const win = document.createElement('div');
+  win.className = 'modal-window';
+  win.dataset.modalId = modalId;
+  const content = document.createElement('div');
+  content.className = 'modal-content plan-viewer-content';
+  content.innerHTML = `
+    <div class="modal-window-controls">
+      <button class="modal-minimize" onclick="minimizeModal('${esc(modalId)}')" title="Minimize">&#x2015;</button>
+      <button class="modal-close" onclick="closeModalById('${esc(modalId)}')" title="Close">&#10005;</button>
+    </div>
+    <div class="plan-viewer-header modal-header">
+      <h3 style="color:#c4b5fd;margin:0;font-size:15px">${esc(headerLabel)}</h3>
+      <div style="color:var(--text-faint);font-size:12px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(taskTitle)}</div>
+    </div>
+    <div class="plan-viewer-body">${bodyHTML}</div>`;
+  win.appendChild(content);
+  document.getElementById('modal-layer').appendChild(win);
+
+  const z = nextModalZ++;
+  win.style.zIndex = z;
+  openModals.set(modalId, { projectId: null, element: win, minimized: false, zIndex: z });
+  centerModalElement(win);
+  focusModal(modalId);
+}
+
+async function openPlanFileViewer(projectId, sessionId) {
+  const modalId = `__planfile_${sessionId}`;
+
+  // If already open, focus it
+  if (openModals.has(modalId)) {
+    const entry = openModals.get(modalId);
+    if (entry.minimized) restoreModal(modalId);
+    focusModal(modalId);
+    return;
+  }
+
+  // Fetch plan file content from server
+  let data;
+  try {
+    const resp = await fetch(API_BASE + `/api/project/${projectId}/agent/plan-file?session=${sessionId}`);
+    if (!resp.ok) throw new Error('not found');
+    data = await resp.json();
+  } catch (e) {
+    return;
+  }
+
+  const filename = data.filename || 'Plan';
+  const lines = data.content.split('\n');
+
+  // Render markdown lines with rich formatting
+  let bodyHTML = '';
+  let tableLines = [];
+  function flushTable() {
+    if (tableLines.length === 0) return;
+    if (isPipeTable(tableLines)) {
+      bodyHTML += `<div class="hl-table">${buildPipeTable(tableLines)}</div>`;
+    } else {
+      bodyHTML += `<div class="hl-table-pre">${tableLines.map(l => formatTableLine(esc(l))).join('\n')}</div>`;
+    }
+    tableLines = [];
+  }
+  for (const line of lines) {
+    if (isTableLine(line)) {
+      tableLines.push(line);
+    } else if (tableLines.length > 0 && line.trim() === '') {
+      tableLines.push(line);
+    } else {
+      flushTable();
+      bodyHTML += `<div class="agent-line">${formatAgentText(line)}</div>`;
+    }
+  }
+  flushTable();
+
+  const win = document.createElement('div');
+  win.className = 'modal-window';
+  win.dataset.modalId = modalId;
+  const content = document.createElement('div');
+  content.className = 'modal-content plan-viewer-content';
+  content.innerHTML = `
+    <div class="modal-window-controls">
+      <button class="modal-minimize" onclick="minimizeModal('${esc(modalId)}')" title="Minimize">&#x2015;</button>
+      <button class="modal-close" onclick="closeModalById('${esc(modalId)}')" title="Close">&#10005;</button>
+    </div>
+    <div class="plan-viewer-header modal-header">
+      <h3 style="color:#c4b5fd;margin:0;font-size:15px">&#128196; ${esc(filename)}</h3>
+      <div style="color:var(--text-faint);font-size:12px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(data.path)}</div>
+    </div>
+    <div class="plan-viewer-body">${bodyHTML}</div>`;
+  win.appendChild(content);
+  document.getElementById('modal-layer').appendChild(win);
+
+  const z = nextModalZ++;
+  win.style.zIndex = z;
+  openModals.set(modalId, { projectId: null, element: win, minimized: false, zIndex: z });
+  centerModalElement(win);
+  focusModal(modalId);
+}
+
+// ── New Project Creation ────────────────────────────────────────────────────
+
+function openNewProjectForm() {
+  const modalId = '__new_project';
+  if (openModals.has(modalId)) {
+    const entry = openModals.get(modalId);
+    if (entry.minimized) restoreModal(modalId);
+    focusModal(modalId);
+    return;
+  }
+
+  const win = document.createElement('div');
+  win.className = 'modal-window';
+  win.dataset.modalId = modalId;
+  const content = document.createElement('div');
+  content.className = 'modal-content';
+  content.innerHTML = `
+    <div class="modal-window-controls">
+      <button class="modal-minimize" onclick="minimizeModal('${modalId}')" title="Minimize">&#x2015;</button>
+      <button class="modal-close" onclick="closeModalById('${modalId}')" title="Close">&#10005;</button>
+    </div>
+    <div class="new-project-form">
+      <h2>Create New Project</h2>
+      <div class="form-group">
+        <label>Name</label>
+        <input type="text" id="new-proj-name" placeholder="My Project" oninput="autoSlug()">
+      </div>
+      <div class="form-group">
+        <label>ID (slug)</label>
+        <input type="text" id="new-proj-id" placeholder="my_project">
+        <div class="hint">Lowercase, underscores. Auto-generated from name.</div>
+      </div>
+      <div class="form-group">
+        <label>Domain</label>
+        <select id="new-proj-domain" class="priority-select" style="width:100%;padding:8px 12px;font-size:13px">
+          <option value="general">General</option>
+          <option value="trading">Trading</option>
+          <option value="infra">Infra</option>
+          <option value="hobby">Hobby</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Project Path (optional)</label>
+        <input type="text" id="new-proj-path" placeholder="C:\\Users\\...\\MyProject">
+      </div>
+      <button class="btn-add" style="padding:10px 24px;font-size:13px" onclick="createProject()">Create Project</button>
+    </div>`;
+  win.appendChild(content);
+  document.getElementById('modal-layer').appendChild(win);
+
+  const z = nextModalZ++;
+  win.style.zIndex = z;
+  openModals.set(modalId, { projectId: null, element: win, minimized: false, zIndex: z });
+  centerModalElement(win);
+  focusModal(modalId);
+  setTimeout(() => document.getElementById('new-proj-name')?.focus(), 100);
+}
+
+function autoSlug() {
+  const name = document.getElementById('new-proj-name').value;
+  document.getElementById('new-proj-id').value = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
+async function createProject() {
+  const id = document.getElementById('new-proj-id').value.trim();
+  const name = document.getElementById('new-proj-name').value.trim();
+  const domain = document.getElementById('new-proj-domain').value;
+  const path = document.getElementById('new-proj-path').value.trim();
+  if (!id || !name) { alert('Name and ID are required'); return; }
+  if (allProjects.find(p => p.id === id)) { alert('A project with this ID already exists'); return; }
+  try {
+    const res = await fetch(API_BASE + `/api/project/${encodeURIComponent(id)}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, domain, status: 'active', project_path: path })
+    });
+    const data = await res.json();
+    if (!data.ok) { alert(data.error || 'Failed to create project'); return; }
+    closeModalById('__new_project');
+    await refreshSilent();
+    openProjectModal(id);
+  } catch(e) { alert('Failed to create project: ' + e.message); }
+}
+
+function startRefresh() {
+  refreshCountdown = 30;
+  clearInterval(refreshInterval); clearInterval(countdownInterval);
+  refreshInterval = setInterval(() => { fetchProjects(); refreshCountdown = 30; }, 30000);
+  countdownInterval = setInterval(() => {
+    refreshCountdown--;
+    document.getElementById('refresh-timer').textContent = `refresh in ${refreshCountdown}s`;
+  }, 1000);
+}
+
+document.querySelectorAll('.filter-btn').forEach(b => b.addEventListener('click', () => setFilter(b.dataset.filter)));
+fetchProjects().then(async () => {
+  // Restore any running/completed agent sessions into the console
+  for (const p of allProjects) {
+    if (p.project_path) await fetchAgentStatus(p.id);
+  }
+});
+startRefresh();
+
+// ── Fallback: poll for missed agent completions every 15s ───────────────────
+setInterval(async () => {
+  const running = agentHistory.filter(h => h.status === 'running');
+  if (running.length === 0) return;
+  const checked = new Set();
+  for (const h of running) {
+    if (checked.has(h.projectId)) continue;
+    checked.add(h.projectId);
+    try {
+      const res = await fetch(API_BASE + `/api/project/${h.projectId}/agent/status`);
+      const data = await res.json();
+      const serverMap = {};
+      for (const s of (data.sessions || [])) serverMap[s.session_id] = s;
+      for (const rh of running.filter(x => x.projectId === h.projectId)) {
+        const ss = serverMap[rh.sessionId];
+        if (!ss) {
+          // Session vanished from server (e.g. server restart) — mark as lost
+          if (!agentEventSources[rh.sessionId]) {
+            rh.status = 'error';
+            if (agentStatusCache[rh.sessionId]) agentStatusCache[rh.sessionId].status = 'error';
+            delete agentLogCache[h.projectId];
+            refreshModal();
+            renderAgentConsole();
+            refreshSilent();
+          }
+          continue;
+        }
+        if (ss.status !== 'running' && !agentEventSources[rh.sessionId]) {
+          // Server says done but we missed the SSE event
+          rh.status = ss.status;
+          if (agentStatusCache[rh.sessionId]) agentStatusCache[rh.sessionId].status = ss.status;
+          agentOutputBuffers[rh.sessionId] = ss.log_lines;
+          delete agentLogCache[h.projectId];
+          refreshModal();
+          renderAgentConsole();
+          refreshSilent();
+        } else if (ss.status === 'running' && !agentEventSources[rh.sessionId]) {
+          // Still running but SSE dropped — reconnect
+          connectAgentStream(h.projectId, rh.sessionId);
+        }
+      }
+    } catch(e) {}
+  }
+}, 15000);
+
+// ── Cleanup running agents on page close ────────────────────────────────────
+window.addEventListener('beforeunload', () => {
+  // Close all SSE connections — processes keep running server-side
+  for (const sid in agentEventSources) {
+    try { agentEventSources[sid].close(); } catch {}
+  }
+});
+
+// ── Modal drag-to-move (multi-modal) ────────────────────────────────────────
+
+let modalDrag = null;
+
+document.getElementById('modal-layer').addEventListener('mousedown', (e) => {
+  const header = e.target.closest('.modal-header');
+  if (!header) return;
+  if (e.target.closest('input, button, select, textarea, [contenteditable]')) return;
+  e.preventDefault();
+  const win = e.target.closest('.modal-window');
+  if (!win) return;
+  const rect = win.getBoundingClientRect();
+  modalDrag = { element: win, startX: e.clientX, startY: e.clientY, origLeft: rect.left, origTop: rect.top };
+  header.classList.add('dragging');
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!modalDrag) return;
+  const dx = e.clientX - modalDrag.startX;
+  const dy = e.clientY - modalDrag.startY;
+  modalDrag.element.style.left = Math.max(0, Math.min(window.innerWidth - 100, modalDrag.origLeft + dx)) + 'px';
+  modalDrag.element.style.top = Math.max(0, Math.min(window.innerHeight - 50, modalDrag.origTop + dy)) + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  if (!modalDrag) return;
+  modalDrag.element.querySelector('.modal-header.dragging')?.classList.remove('dragging');
+  modalDrag = null;
+});
+
+// ── Agent chat resize handle ────────────────────────────────────────────────
+
+let chatResize = null;
+
+document.getElementById('modal-layer').addEventListener('mousedown', (e) => {
+  const handle = e.target.closest('.agent-chat-resize');
+  if (!handle) return;
+  e.preventDefault();
+  const chat = handle.parentElement;
+  chatResize = { element: chat, startY: e.clientY, origHeight: chat.offsetHeight };
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!chatResize) return;
+  const dy = e.clientY - chatResize.startY;
+  const newH = Math.max(120, Math.min(window.innerHeight * 0.8, chatResize.origHeight + dy));
+  chatResize.element.style.height = newH + 'px';
+});
+
+document.addEventListener('mouseup', () => {
+  chatResize = null;
+});
+
+// ── Ctrl+Scroll zoom on agent output areas ──────────────────────────────────
+
+const modalZoomLevels = {}; // modalId → current font-size in px
+
+document.getElementById('modal-layer').addEventListener('wheel', (e) => {
+  if (!e.ctrlKey) return;
+  const target = e.target.closest('.agent-output, .ac-session-output, .plan-viewer-body');
+  if (!target) return;
+  const modal = target.closest('.modal-window');
+  if (!modal) return;
+  e.preventDefault();
+  const modalId = modal.dataset.modalId;
+  if (!modalZoomLevels[modalId]) modalZoomLevels[modalId] = 12;
+  const delta = e.deltaY > 0 ? -1 : 1;
+  modalZoomLevels[modalId] = Math.max(8, Math.min(24, modalZoomLevels[modalId] + delta));
+  modal.querySelectorAll('.agent-output, .ac-session-output, .plan-viewer-body').forEach(el => {
+    el.style.fontSize = modalZoomLevels[modalId] + 'px';
+  });
+}, { passive: false });
+</script>
+</body>
+</html>
