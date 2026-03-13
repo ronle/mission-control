@@ -26,6 +26,10 @@ def _load_config():
         'port': 5199,
         'shared_rules_path': str(Path(BASE_DIR) / 'data' / 'SHARED_RULES.md'),
         'projects_base': str(Path.home()),
+        'agent_model': '',
+        'agent_max_turns': 0,
+        'agent_permission_mode': '',
+        'desktop_mode': False,
     }
     if CONFIG_PATH.exists():
         try:
@@ -70,6 +74,23 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 SHARED_RULES_PATH = Path(CONFIG.get('shared_rules_path', ''))
 PROJECTS_BASE = Path(CONFIG.get('projects_base', str(Path.home())))
+
+
+def _build_claude_flags():
+    """Build common Claude CLI flags from config."""
+    flags = ['--print', '--verbose', '--output-format', 'stream-json',
+             '--dangerously-skip-permissions']
+    model = CONFIG.get('agent_model', '')
+    if model:
+        flags.extend(['--model', model])
+    max_turns = CONFIG.get('agent_max_turns', 0)
+    if max_turns and int(max_turns) > 0:
+        flags.extend(['--max-turns', str(int(max_turns))])
+    perm_mode = CONFIG.get('agent_permission_mode', '')
+    if perm_mode:
+        flags.extend(['--permission-mode', perm_mode])
+    return flags
+
 
 # ── Agent session tracking ───────────────────────────────────────────────────
 # session_id → {proc, status, task, log_lines, started_at, session_id, project_id}
@@ -692,11 +713,7 @@ def _auto_dispatch_followup(session, message):
     else:
         resume_flags = ['--continue']
 
-    cmd = [
-        'claude', *resume_flags, '-p', message,
-        '--print', '--verbose', '--output-format', 'stream-json',
-        '--dangerously-skip-permissions',
-    ]
+    cmd = ['claude', *resume_flags, '-p', message, *_build_claude_flags()]
 
     try:
         proc = subprocess.Popen(
@@ -741,19 +758,11 @@ def agent_dispatch(project_id):
         session_id = uuid.uuid4().hex[:12]
 
         if resume_id:
-            cmd = [
-                'claude', '-r', resume_id, '-p', task,
-                '--print', '--verbose', '--output-format', 'stream-json',
-                '--dangerously-skip-permissions',
-            ]
+            cmd = ['claude', '-r', resume_id, '-p', task, *_build_claude_flags()]
         else:
             context = _build_agent_context(p)
-            cmd = [
-                'claude', '-p', task,
-                '--print', '--verbose', '--output-format', 'stream-json',
-                '--dangerously-skip-permissions',
-                '--append-system-prompt', context,
-            ]
+            cmd = ['claude', '-p', task, *_build_claude_flags(),
+                   '--append-system-prompt', context]
 
         proc = subprocess.Popen(
             cmd,
@@ -859,11 +868,7 @@ def agent_followup(project_id):
         else:
             resume_flags = ['--continue']
 
-        cmd = [
-            'claude', *resume_flags, '-p', message,
-            '--print', '--verbose', '--output-format', 'stream-json',
-            '--dangerously-skip-permissions',
-        ]
+        cmd = ['claude', *resume_flags, '-p', message, *_build_claude_flags()]
 
         proc = subprocess.Popen(
             cmd,
