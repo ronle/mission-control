@@ -1115,6 +1115,34 @@ def save_project_order():
     return jsonify({'ok': True})
 
 
+@app.route('/api/list-directory', methods=['POST'])
+def list_directory():
+    data = request.get_json() or {}
+    path = (data.get('path') or '').strip()
+    target = Path(path) if path else PROJECTS_BASE
+    try:
+        target = target.resolve()
+    except Exception as e:
+        return jsonify({'error': f'Invalid path: {e}'}), 400
+    if not target.is_dir():
+        return jsonify({'error': f'Not a directory: {target}'}), 400
+    try:
+        dirs = sorted(
+            item.name for item in target.iterdir()
+            if item.is_dir() and not item.name.startswith('.')
+        )
+        return jsonify({
+            'path': str(target),
+            'parent': str(target.parent) if target.parent != target else None,
+            'dirs': dirs,
+            'projects_base': str(PROJECTS_BASE),
+        })
+    except PermissionError:
+        return jsonify({'error': f'Permission denied: {target}'}), 403
+    except Exception as e:
+        return jsonify({'error': f'Failed to list directory: {e}'}), 500
+
+
 @app.route('/api/create-folder', methods=['POST'])
 def create_folder():
     data = request.get_json()

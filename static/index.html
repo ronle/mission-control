@@ -1127,6 +1127,39 @@
   .form-group input::placeholder { color: var(--text-faint); }
   .form-group .hint { font-size: 11px; color: var(--text-faint); margin-top: 3px; }
 
+  /* ── FOLDER BROWSER ────────────────────────────────────────── */
+  .folder-breadcrumb {
+    display: flex; align-items: center; gap: 2px;
+    padding: 6px 8px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 5px; margin-bottom: 6px; overflow-x: auto; white-space: nowrap;
+    font-size: 12px; font-family: 'JetBrains Mono', monospace;
+  }
+  .folder-breadcrumb::-webkit-scrollbar { height: 4px; }
+  .folder-breadcrumb::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .folder-crumb {
+    color: var(--accent); cursor: pointer; padding: 2px 4px; border-radius: 3px; flex-shrink: 0;
+  }
+  .folder-crumb:hover { background: var(--accent-dim); }
+  .folder-crumb-sep { color: var(--text-faint); flex-shrink: 0; font-size: 10px; }
+  .folder-crumb-current { color: var(--text); font-weight: 600; padding: 2px 4px; flex-shrink: 0; }
+  .folder-listing {
+    display: flex; flex-direction: column; gap: 2px;
+    max-height: 200px; overflow-y: auto;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 4px;
+  }
+  .folder-listing::-webkit-scrollbar { width: 5px; }
+  .folder-listing::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  .folder-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 4px; cursor: pointer;
+    color: var(--text-dim); font-size: 13px; transition: background 0.1s;
+  }
+  .folder-item:hover { background: var(--surface3); color: var(--text); }
+  .folder-item-icon { flex-shrink: 0; color: var(--accent); font-size: 14px; }
+  .folder-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .folder-empty, .folder-loading { padding: 16px; text-align: center; color: var(--text-faint); font-size: 12px; }
+  .folder-error { padding: 10px; color: var(--red-text); font-size: 12px; background: var(--red-dim); border-radius: 4px; text-align: center; }
+
   /* ── AGENT CONSOLE (persistent bottom panel) ────────────────── */
   .agent-console {
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 150;
@@ -3626,12 +3659,26 @@ function openNewProjectForm() {
       </div>
       <div class="form-group">
         <label>Project Path (optional)</label>
-        <input type="text" id="new-proj-path" placeholder="C:\\Users\\...\\MyProject">
-        <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
-          <input type="text" id="new-proj-folder" placeholder="New folder name" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 10px;border-radius:5px;outline:none">
-          <button class="btn-add" style="padding:6px 14px;font-size:12px;white-space:nowrap" onclick="createProjectFolder()">Create Folder</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" id="new-proj-path" placeholder="C:\\Users\\...\\MyProject" style="flex:1"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();browseTo(this.value)}">
+          <button class="btn-add" style="padding:6px 14px;font-size:12px;white-space:nowrap"
+                  onclick="toggleFolderBrowser()" id="browse-toggle-btn">Browse</button>
         </div>
-        <div class="hint">Creates folder inside the path above, or in your projects directory if empty.</div>
+        <div id="folder-browser" style="display:none;margin-top:8px">
+          <div id="folder-breadcrumb" class="folder-breadcrumb"></div>
+          <div id="folder-listing" class="folder-listing"></div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
+            <input type="text" id="new-proj-folder" placeholder="New folder name"
+                   style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 10px;border-radius:5px;outline:none"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();createFolderInBrowser()}">
+            <button class="btn-add" style="padding:6px 14px;font-size:12px;white-space:nowrap"
+                    onclick="createFolderInBrowser()">New Folder</button>
+          </div>
+          <button class="btn-add" style="margin-top:6px;padding:6px 14px;font-size:12px;width:100%"
+                  onclick="selectBrowsedFolder()">&#10003; Use This Directory</button>
+        </div>
+        <div class="hint">Browse to select a directory, or type/paste a path directly.</div>
       </div>
       <button class="btn-add" style="padding:10px 24px;font-size:13px" onclick="createProject()">Create Project</button>
     </div>`;
@@ -3643,6 +3690,8 @@ function openNewProjectForm() {
   openModals.set(modalId, { projectId: null, element: win, minimized: false, zIndex: z });
   centerModalElement(win);
   focusModal(modalId);
+  folderBrowserOpen = false;
+  folderBrowserPath = '';
   setTimeout(() => document.getElementById('new-proj-name')?.focus(), 100);
 }
 
@@ -3651,24 +3700,108 @@ function autoSlug() {
   document.getElementById('new-proj-id').value = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 }
 
-async function createProjectFolder() {
+// ── Folder Browser ────────────────────────────────────────────────────────
+let folderBrowserPath = '';
+let folderBrowserOpen = false;
+
+function toggleFolderBrowser() {
+  folderBrowserOpen = !folderBrowserOpen;
+  const panel = document.getElementById('folder-browser');
+  const btn = document.getElementById('browse-toggle-btn');
+  if (folderBrowserOpen) {
+    panel.style.display = 'block';
+    btn.textContent = 'Hide';
+    const startPath = (document.getElementById('new-proj-path').value || '').trim();
+    loadDirectory(startPath || '');
+  } else {
+    panel.style.display = 'none';
+    btn.textContent = 'Browse';
+  }
+}
+
+async function loadDirectory(path) {
+  const listing = document.getElementById('folder-listing');
+  listing.innerHTML = '<div class="folder-loading">Loading...</div>';
+  try {
+    const res = await fetch(API_BASE + '/api/list-directory', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ path: path || '' })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      listing.innerHTML = `<div class="folder-error">${esc(data.error)}</div>`;
+      return;
+    }
+    folderBrowserPath = data.path;
+    renderBreadcrumb(data.path, data.parent);
+    if (data.dirs.length === 0) {
+      listing.innerHTML = '<div class="folder-empty">No subdirectories</div>';
+    } else {
+      listing.innerHTML = data.dirs.map(name =>
+        `<div class="folder-item" data-dir="${esc(name)}" title="${esc(name)}">
+          <span class="folder-item-icon">&#128193;</span>
+          <span class="folder-item-name">${esc(name)}</span>
+        </div>`
+      ).join('');
+    }
+    listing.onclick = function(e) {
+      const item = e.target.closest('.folder-item');
+      if (!item) return;
+      loadDirectory(folderBrowserPath + '/' + item.dataset.dir);
+    };
+  } catch(e) {
+    listing.innerHTML = `<div class="folder-error">Failed to load: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderBreadcrumb(currentPath, parentPath) {
+  const bc = document.getElementById('folder-breadcrumb');
+  const isWindows = currentPath.includes('\\');
+  const parts = currentPath.split(/[/\\]/).filter(Boolean);
+  let html = '';
+  let accumulated = isWindows ? '' : '/';
+  parts.forEach((part, i) => {
+    if (i > 0) html += '<span class="folder-crumb-sep">&#9656;</span>';
+    accumulated += (i > 0 ? '/' : '') + part;
+    const segPath = accumulated;
+    if (i === parts.length - 1) {
+      html += `<span class="folder-crumb-current">${esc(part)}</span>`;
+    } else {
+      html += `<span class="folder-crumb" onclick="loadDirectory('${esc(segPath)}')">${esc(part)}</span>`;
+    }
+  });
+  if (parentPath) {
+    html = `<span class="folder-crumb" onclick="loadDirectory('${esc(parentPath)}')" title="Go up"
+             style="font-size:14px;margin-right:4px">&#11176;</span>` + html;
+  }
+  bc.innerHTML = html;
+}
+
+function browseTo(path) {
+  if (!folderBrowserOpen) toggleFolderBrowser();
+  else loadDirectory(path);
+}
+
+function selectBrowsedFolder() {
+  document.getElementById('new-proj-path').value = folderBrowserPath;
+  toggleFolderBrowser();
+}
+
+async function createFolderInBrowser() {
   const folderInput = document.getElementById('new-proj-folder');
-  const pathInput = document.getElementById('new-proj-path');
   const folderName = (folderInput.value || '').trim();
   if (!folderName) { alert('Enter a folder name'); return; }
-  const parent = (pathInput.value || '').trim();
-  const body = { name: folderName };
-  if (parent) body.parent = parent;
   try {
     const res = await fetch(API_BASE + '/api/create-folder', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(body)
+      body: JSON.stringify({ name: folderName, parent: folderBrowserPath })
     });
     const data = await res.json();
     if (!res.ok) { alert(data.error || 'Failed to create folder'); return; }
-    pathInput.value = data.path;
     folderInput.value = '';
+    loadDirectory(data.path);
   } catch(e) { alert('Failed to create folder: ' + e.message); }
 }
 
