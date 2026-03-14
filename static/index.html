@@ -537,7 +537,7 @@
   .btn-undo:hover { color: var(--accent); border-color: var(--accent); }
 
   /* FEED */
-  .feed-col { width: 380px; flex-shrink: 0; position: sticky; top: 90px; z-index: 201; max-height: calc(100vh - 100px); display: flex; flex-direction: column; }
+  .feed-col { width: 380px; flex-shrink: 0; position: sticky; top: 90px; z-index: 99; max-height: calc(100vh - 100px); display: flex; flex-direction: column; overflow: hidden; }
   .feed-header {
     font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
     color: var(--text-dim); font-weight: 600;
@@ -3628,10 +3628,10 @@ function openNewProjectForm() {
         <label>Project Path (optional)</label>
         <input type="text" id="new-proj-path" placeholder="C:\\Users\\...\\MyProject">
         <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
-          <input type="text" id="new-proj-folder" placeholder="Folder name" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 10px;border-radius:5px;outline:none">
+          <input type="text" id="new-proj-folder" placeholder="New folder name" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 10px;border-radius:5px;outline:none">
           <button class="btn-add" style="padding:6px 14px;font-size:12px;white-space:nowrap" onclick="createProjectFolder()">Create Folder</button>
         </div>
-        <div class="hint">Or create a new folder under your projects directory.</div>
+        <div class="hint">Creates folder inside the path above, or in your projects directory if empty.</div>
       </div>
       <button class="btn-add" style="padding:10px 24px;font-size:13px" onclick="createProject()">Create Project</button>
     </div>`;
@@ -3653,17 +3653,21 @@ function autoSlug() {
 
 async function createProjectFolder() {
   const folderInput = document.getElementById('new-proj-folder');
+  const pathInput = document.getElementById('new-proj-path');
   const folderName = (folderInput.value || '').trim();
   if (!folderName) { alert('Enter a folder name'); return; }
+  const parent = (pathInput.value || '').trim();
+  const body = { name: folderName };
+  if (parent) body.parent = parent;
   try {
     const res = await fetch(API_BASE + '/api/create-folder', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name: folderName })
+      body: JSON.stringify(body)
     });
     const data = await res.json();
     if (!res.ok) { alert(data.error || 'Failed to create folder'); return; }
-    document.getElementById('new-proj-path').value = data.path;
+    pathInput.value = data.path;
     folderInput.value = '';
   } catch(e) { alert('Failed to create folder: ' + e.message); }
 }

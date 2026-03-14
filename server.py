@@ -1119,12 +1119,16 @@ def save_project_order():
 def create_folder():
     data = request.get_json()
     folder_name = (data or {}).get('name', '').strip()
+    parent = (data or {}).get('parent', '').strip()
     if not folder_name:
         return jsonify({'error': 'Folder name is required'}), 400
-    # Prevent path traversal
+    # Prevent path traversal in folder name
     if '..' in folder_name or folder_name.startswith(('/', '\\')):
         return jsonify({'error': 'Invalid folder name'}), 400
-    target = PROJECTS_BASE / folder_name
+    base = Path(parent) if parent else PROJECTS_BASE
+    if not base.is_dir():
+        return jsonify({'error': f'Parent directory does not exist: {base}'}), 400
+    target = base / folder_name
     if target.exists():
         return jsonify({'error': 'Folder already exists', 'path': str(target)}), 409
     try:
