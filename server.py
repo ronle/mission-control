@@ -1115,6 +1115,25 @@ def save_project_order():
     return jsonify({'ok': True})
 
 
+@app.route('/api/create-folder', methods=['POST'])
+def create_folder():
+    data = request.get_json()
+    folder_name = (data or {}).get('name', '').strip()
+    if not folder_name:
+        return jsonify({'error': 'Folder name is required'}), 400
+    # Prevent path traversal
+    if '..' in folder_name or folder_name.startswith(('/', '\\')):
+        return jsonify({'error': 'Invalid folder name'}), 400
+    target = PROJECTS_BASE / folder_name
+    if target.exists():
+        return jsonify({'error': 'Folder already exists', 'path': str(target)}), 409
+    try:
+        target.mkdir(parents=True, exist_ok=False)
+    except Exception as e:
+        return jsonify({'error': f'Failed to create folder: {e}'}), 500
+    return jsonify({'ok': True, 'path': str(target)})
+
+
 # ── Static ───────────────────────────────────────────────────────────────────
 
 @app.route('/')

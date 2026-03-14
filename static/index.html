@@ -3627,6 +3627,11 @@ function openNewProjectForm() {
       <div class="form-group">
         <label>Project Path (optional)</label>
         <input type="text" id="new-proj-path" placeholder="C:\\Users\\...\\MyProject">
+        <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
+          <input type="text" id="new-proj-folder" placeholder="Folder name" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;padding:6px 10px;border-radius:5px;outline:none">
+          <button class="btn-add" style="padding:6px 14px;font-size:12px;white-space:nowrap" onclick="createProjectFolder()">Create Folder</button>
+        </div>
+        <div class="hint">Or create a new folder under your projects directory.</div>
       </div>
       <button class="btn-add" style="padding:10px 24px;font-size:13px" onclick="createProject()">Create Project</button>
     </div>`;
@@ -3644,6 +3649,23 @@ function openNewProjectForm() {
 function autoSlug() {
   const name = document.getElementById('new-proj-name').value;
   document.getElementById('new-proj-id').value = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
+async function createProjectFolder() {
+  const folderInput = document.getElementById('new-proj-folder');
+  const folderName = (folderInput.value || '').trim();
+  if (!folderName) { alert('Enter a folder name'); return; }
+  try {
+    const res = await fetch(API_BASE + '/api/create-folder', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name: folderName })
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || 'Failed to create folder'); return; }
+    document.getElementById('new-proj-path').value = data.path;
+    folderInput.value = '';
+  } catch(e) { alert('Failed to create folder: ' + e.message); }
 }
 
 async function createProject() {
