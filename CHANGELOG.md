@@ -1,5 +1,21 @@
 # Mission Control — Changelog
 
+## [2026-03-13] — User and agent name settings
+
+### Done
+- Added `user_name` and `agent_name` to config.json defaults
+- User name replaces hardcoded "Ron" in agent log lines (falls back to "User")
+- Agent name and user name injected into agent system prompt context
+- Added settings 7 (Your name) and 8 (Agent name) to both installer scripts
+- Settings shown in post-install summary
+
+### Files Changed
+- server.py: New config defaults, replaced hardcoded "Ron" with `user_name`, inject names into `_build_agent_context()`
+- install.bat: Added prompts 7-8, updated config.json writer and summary
+- install.sh: Added prompts 7-8, updated config.json writer and summary
+
+---
+
 ## [2026-03-13] — Open-source release preparation
 
 ### Done

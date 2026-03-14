@@ -30,6 +30,8 @@ def _load_config():
         'agent_max_turns': 0,
         'agent_permission_mode': '',
         'desktop_mode': False,
+        'user_name': '',
+        'agent_name': '',
     }
     if CONFIG_PATH.exists():
         try:
@@ -513,6 +515,12 @@ def agent_upload_image():
 def _build_agent_context(project):
     """Build system prompt context for the agent."""
     parts = []
+    agent_name = CONFIG.get('agent_name', '')
+    user_name = CONFIG.get('user_name', '')
+    if agent_name:
+        parts.append(f"Your name is {agent_name}.")
+    if user_name:
+        parts.append(f"The user's name is {user_name}. Address them accordingly.")
     parts.append(f"You are working on {project.get('name', project['id'])}.")
     pp = project.get('project_path', '')
     if pp:
@@ -731,7 +739,8 @@ def _auto_dispatch_followup(session, message):
 
     session['proc'] = proc
     session['status'] = 'running'
-    session['log_lines'].append(f"> Ron: {message}")
+    user_label = CONFIG.get('user_name') or 'User'
+    session['log_lines'].append(f"> {user_label}: {message}")
 
     t = threading.Thread(target=_read_agent_stream, args=(proc, session), daemon=True)
     t.start()
@@ -857,7 +866,8 @@ def agent_followup(project_id):
         if existing['status'] == 'running':
             pending = existing.setdefault('pending_followups', [])
             pending.append(message)
-            existing['log_lines'].append(f"> [queued] Ron: {message}")
+            user_label = CONFIG.get('user_name') or 'User'
+            existing['log_lines'].append(f"> [queued] {user_label}: {message}")
             _log_agent_activity(project_id, f"Agent follow-up queued: {message[:100]}")
             return jsonify({'ok': True, 'queued': True, 'session_id': session_id})
 
@@ -882,7 +892,8 @@ def agent_followup(project_id):
 
         existing['proc'] = proc
         existing['status'] = 'running'
-        existing['log_lines'].append(f"\n> Ron: {message}\n")
+        user_label = CONFIG.get('user_name') or 'User'
+        existing['log_lines'].append(f"\n> {user_label}: {message}\n")
 
         t = threading.Thread(target=_read_agent_stream, args=(proc, existing), daemon=True)
         t.start()

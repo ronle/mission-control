@@ -537,7 +537,7 @@
   .btn-undo:hover { color: var(--accent); border-color: var(--accent); }
 
   /* FEED */
-  .feed-col { width: 380px; flex-shrink: 0; position: sticky; top: 90px; z-index: 201; }
+  .feed-col { width: 380px; flex-shrink: 0; position: sticky; top: 90px; z-index: 201; max-height: calc(100vh - 100px); display: flex; flex-direction: column; }
   .feed-header {
     font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
     color: var(--text-dim); font-weight: 600;
@@ -545,8 +545,10 @@
   }
   .feed-entries {
     display: flex; flex-direction: column; gap: 6px;
-    max-height: calc(100vh - 180px); overflow-y: auto;
+    flex: 1; min-height: 0; overflow-y: auto;
   }
+  body.console-visible .feed-col { max-height: calc(100vh - 146px); }
+  body.console-open .feed-col { max-height: calc(100vh - 420px); }
   .feed-entries::-webkit-scrollbar { width: 4px; }
   .feed-entries::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
   .feed-entry {

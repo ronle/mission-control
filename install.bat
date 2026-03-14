@@ -173,11 +173,23 @@ if /i "!CFG_DESKTOP!" equ "y" (
     set CFG_DESKTOP_BOOL=false
 )
 
+:: User name
+echo.
+echo  Your name — the agent will address you by this name.
+set "CFG_USERNAME="
+set /p "CFG_USERNAME=  7. Your name []: "
+
+:: Agent name
+echo.
+echo  Give the agent a name (optional personality touch).
+set "CFG_AGENTNAME="
+set /p "CFG_AGENTNAME=  8. Agent name []: "
+
 :: Write config.json
 echo.
 echo  Writing config.json...
 
-python -c "import json,sys; json.dump({'port':int(sys.argv[1]),'projects_base':sys.argv[2],'shared_rules_path':sys.argv[3],'agent_model':sys.argv[4],'agent_max_turns':int(sys.argv[5]),'agent_permission_mode':'','desktop_mode':sys.argv[6]=='true'},open('config.json','w',encoding='utf-8'),indent=2,ensure_ascii=False)" "%CFG_PORT%" "%CFG_PROJECTS%" "%CFG_RULES%" "%CFG_MODEL%" "%CFG_MAXTURNS%" "%CFG_DESKTOP_BOOL%"
+python -c "import json,sys; json.dump({'port':int(sys.argv[1]),'projects_base':sys.argv[2],'shared_rules_path':sys.argv[3],'agent_model':sys.argv[4],'agent_max_turns':int(sys.argv[5]),'agent_permission_mode':'','desktop_mode':sys.argv[6]=='true','user_name':sys.argv[7],'agent_name':sys.argv[8]},open('config.json','w',encoding='utf-8'),indent=2,ensure_ascii=False)" "%CFG_PORT%" "%CFG_PROJECTS%" "%CFG_RULES%" "%CFG_MODEL%" "%CFG_MAXTURNS%" "%CFG_DESKTOP_BOOL%" "%CFG_USERNAME%" "%CFG_AGENTNAME%"
 if %ERRORLEVEL% neq 0 (
     echo  WARNING: Could not write config.json. Using defaults.
 ) else (
@@ -256,6 +268,12 @@ if /i "%CFG_DESKTOP_BOOL%" equ "true" (
 echo    Mode:           Desktop (Tauri^)
 ) else (
 echo    Mode:           Browser
+)
+if defined CFG_USERNAME if not "%CFG_USERNAME%" == "" (
+echo    Your name:      %CFG_USERNAME%
+)
+if defined CFG_AGENTNAME if not "%CFG_AGENTNAME%" == "" (
+echo    Agent name:     %CFG_AGENTNAME%
 )
 echo.
 echo  To start Mission Control:

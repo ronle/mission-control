@@ -165,6 +165,18 @@ else
     CFG_DESKTOP_BOOL=false
 fi
 
+# 7. User name
+echo ""
+echo "  Your name — the agent will address you by this name."
+read -p "  7. Your name []: " CFG_USERNAME
+CFG_USERNAME=${CFG_USERNAME:-}
+
+# 8. Agent name
+echo ""
+echo "  Give the agent a name (optional personality touch)."
+read -p "  8. Agent name []: " CFG_AGENTNAME
+CFG_AGENTNAME=${CFG_AGENTNAME:-}
+
 # Write config.json
 echo ""
 echo "  Writing config.json..."
@@ -178,10 +190,12 @@ config = {
     'agent_max_turns': int(sys.argv[5]),
     'agent_permission_mode': '',
     'desktop_mode': sys.argv[6] == 'true',
+    'user_name': sys.argv[7],
+    'agent_name': sys.argv[8],
 }
 with open('$SCRIPT_DIR/config.json', 'w', encoding='utf-8') as f:
     json.dump(config, f, indent=2, ensure_ascii=False)
-" "$CFG_PORT" "$CFG_PROJECTS" "$CFG_RULES" "$CFG_MODEL" "$CFG_MAXTURNS" "$CFG_DESKTOP_BOOL"
+" "$CFG_PORT" "$CFG_PROJECTS" "$CFG_RULES" "$CFG_MODEL" "$CFG_MAXTURNS" "$CFG_DESKTOP_BOOL" "$CFG_USERNAME" "$CFG_AGENTNAME"
 
 if [ $? -eq 0 ]; then
     echo "       Saved config.json"
@@ -287,6 +301,12 @@ if [ "$CFG_DESKTOP_BOOL" = "true" ]; then
     echo "    Mode:           Desktop (Tauri)"
 else
     echo "    Mode:           Browser"
+fi
+if [ -n "$CFG_USERNAME" ]; then
+    echo "    Your name:      $CFG_USERNAME"
+fi
+if [ -n "$CFG_AGENTNAME" ]; then
+    echo "    Agent name:     $CFG_AGENTNAME"
 fi
 echo ""
 echo "  To start Mission Control:"
