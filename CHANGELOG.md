@@ -1,5 +1,157 @@
 # Mission Control — Changelog
 
+## [2026-03-15b] — Token tracking, live timer, enter key mode, UX refinements
+
+### Three-dot modal menu
+- Added three-dot menu button (vertical ellipsis) to project modal header controls
+- Menu items: Change Status (Active/Waiting/Blocked/Parked submenu), Edit/Add Description, Delete Project
+- Status submenu shows colored dots and highlights current status
+- Delete Project is danger-styled with confirmation dialog
+- Functions: `toggleModalMenu()`, `toggleModalMenuSub()`, `setProjectStatus()`, `editProjectDescription()`, `deleteProject()`
+- CSS: `.modal-menu-btn`, `.modal-menu-dropdown`, `.modal-menu-item`, `.modal-menu-sep`, `.modal-menu-sub`, `.modal-menu-sub-item`, `.modal-menu-sub-dot`
+
+### Token usage tracking
+- Captures `usage`, `cost_usd`, `num_turns` from Claude CLI `result` message in `_read_agent_stream()`
+- Persists usage data in agent log entries via `_log_agent_completion()`
+- Exposes usage in `agent_status()` API and SSE completion messages
+- Global token counter in header bar (lightning bolt badge) with total tokens + cost
+- Per-session token/cost badge in Agent tab status row (appears on session completion)
+- Token/cost inline in Agent Log entries (after timestamp)
+- Helper functions: `formatTokens()` (1.2k/1.2M), `formatCost()`, `tokenBadgeHTML()`, `sessionMetricsHTML()`
+- CSS: `.token-counter-global`, `.tc-icon`, `.tc-cost`, `.tc-mode`, `.token-badge`, `.agent-log-usage`
+
+### Token counter time range selector
+- Click the global token counter to switch between: All Time, Today, This Week, This Month
+- Context menu with checkmark on active mode
+- Mode persisted in `localStorage` (`tc_mode` key)
+- Server: `/api/usage` endpoint accepts `?since=<ISO timestamp>` for time-filtered aggregation
+- Functions: `getTokenSince()`, `fetchGlobalUsage()`, `openTokenContextMenu()`, `setTokenMode()`
+- `TOKEN_MODES` constant; `tokenCounterMode` state variable
+
+### Live elapsed timer for running sessions
+- Running agent sessions show `⏱ 0s` → `⏱ 1m 23s` → `⏱ 1h 5m` ticking every second
+- Transitions to token count + cost when session completes
+- Functions: `formatElapsed()`, `sessionMetricsHTML()`
+- 1-second `setInterval` updates all running session timer elements
+
+### Enter key mode toggle
+- Configurable send behavior: "Ctrl+Enter sends" (default) or "Enter sends" (Shift+Enter for newline)
+- Accessible from three-dot modal menu → "Enter Key" submenu (shows current mode inline)
+- Global setting persisted in `localStorage` (`enter_mode` key)
+- Applied to all 4 textareas: agent dispatch, follow-up, agent log continue, backlog input
+- Functions: `handleInputEnter()`, `setEnterMode()`
+- Removed standalone right-click context menu — native right-click restored on textareas
+
+### Project delete endpoint
+- Server: `DELETE /api/project/<project_id>` — cleans up attachment files, agent log JSON, kills running agent sessions, deletes project file
+- Frontend: `deleteProject()` calls API, closes modal, refreshes dashboard
+
+### Bug fixes
+- Fixed stale token count showing on follow-up dispatch (usage/cost cleared from cache when session resumes)
+- Fixed `agent_session_delete` — stream reader thread handles completion logging, delete handler just removes from tracking
+
+### Files Changed
+- server.py: `_read_agent_stream()` usage capture, `_log_agent_completion()` usage persistence, `agent_status()` usage fields, SSE status message includes usage, `DELETE /api/project/<id>` endpoint, `GET /api/usage` endpoint with `?since=` filter, `agent_session_delete` logging fix
+- static/index.html: Three-dot menu system, token counter with click-to-switch time range, live elapsed timer, enter key mode toggle, session metrics badge, context menu CSS/JS, all textarea onkeydown handlers unified
+
+---
+
+## [2026-03-15] — Domain management moved to three-dot menu and new project form
+
+### Done
+- Moved domain selection from clickable pill to three-dot menu "Change Domain" submenu
+- Domain submenu shows all domains with colored dots, color picker swatches, and "New domain..." input
+- Domain pill in modal header is now display-only (no longer clickable)
+- Replaced `<select>` in new project form with rich domain picker matching the menu style
+- New project domain picker includes domain list, color swatches, and new domain creation
+- Removed old `toggleDomainDropdown()`, `saveDomain()`, `addDomainFromDropdown()`, `setDomainColor()` functions
+- Added `saveDomainFromMenu()`, `addDomainFromMenu()`, `setDomainColorFromMenu()` for modal menu
+- Added `toggleNewProjDomain()`, `selectNewProjDomain()`, `addNewProjDomainEntry()`, `setNewProjDomainColor()`, `refreshNewProjDomainTrigger()` for new project form
+- `newProjDomain` state variable tracks selection; reset to `'general'` on form open and after creation
+- Removed old CSS: `.domain-select-wrap`, `.domain-tag.editable`, `.domain-dropdown`, `.domain-dropdown-item`
+- Added new CSS: `.new-proj-domain-wrap`, `.new-proj-domain-trigger`, `.new-proj-domain-dd`, `.new-proj-domain-item`
+
+### Files Changed
+- static/index.html: Domain submenu in three-dot menu, display-only pill, rich domain picker in new project form, replaced old domain CSS with new `.new-proj-domain-*` classes
+
+---
+
+## [2026-03-14] — Three-dot menu, token tracking, session resume, enter key mode, dynamic domains
+
+### Three-dot modal menu (new)
+- Built the three-dot menu system for project modals (button, dropdown, submenus)
+- Menu items: Change Status (submenu), Change Domain (submenu), Agent Model (submenu), Edit/Add Description, Delete Project
+- CSS: `.modal-menu-btn`, `.modal-menu-dropdown`, `.modal-menu-item`, `.modal-menu-sep`, `.modal-menu-sub`, `.modal-menu-sub-item`, `.modal-menu-sub-dot`
+- Functions: `toggleModalMenu()`, `toggleModalMenuSub()`, `setProjectStatus()`, `editProjectDescription()`
+
+### Token usage tracking (new)
+- Global token counter in header showing input/output tokens and USD cost
+- Right-click context menu to switch time range: All, Today, This Week, This Month
+- Per-session token badge in agent status row (tokens + cost after completion)
+- Token/cost display in agent log entries
+- `tokenCounterMode` persisted in localStorage; `TOKEN_MODES` constant
+- Functions: `formatTokens()`, `formatCost()`, `tokenBadgeHTML()`, `getTokenSince()`, `fetchGlobalUsage()`, `openTokenContextMenu()`, `setTokenMode()`, `formatElapsed()`, `sessionMetricsHTML()`
+- CSS: `.token-counter-global`, `.tc-icon`, `.tc-cost`, `.tc-mode`, `.tc-context-menu`, `.token-badge`, `.agent-log-usage`
+- Server: new `GET /api/usage` endpoint aggregates tokens/cost across all agent logs and running sessions (supports `?since=` filter)
+- Server: `_read_agent_stream()` captures `usage`, `cost_usd`, `num_turns` from Claude result messages
+- Server: `_log_agent_completion()` persists usage data; SSE status messages include usage; `agent_status()` exposes usage
+
+### Session resume picker
+- Session picker UI when opening Agent tab or clicking "+ New": radio buttons for prior sessions to resume
+- Most recent session pre-selected by default; "Fresh session" available as explicit choice
+- Deduplicated entries (follow-ups no longer show as separate entries)
+- Dispatch button label changes to "Continue" when resuming; default task text becomes "Continue where we left off."
+- `pendingResumeId` state; `getDefaultResumeId()`, `selectResumeSession()`, `sessionPickerHTML()` functions
+- `agentHistory` entries store `resumedFrom` field; `dispatchAgent()` sends `resume_conversation_id`
+- CSS: `.session-picker`, `.session-picker-opt`, `.resume-indicator`
+
+### Per-project agent model
+- Agent Model submenu in three-dot menu (Sonnet 4.5, Opus 4.6, Haiku 4.5, or global default)
+- Per-project `agent_model` overrides global config for all dispatch/follow-up paths
+- Server: `_build_claude_flags(project)` accepts per-project override; all 4 Popen call sites pass project
+
+### Enter key mode toggle (new)
+- Configurable send behavior: "Enter sends" vs "Ctrl+Enter sends" (default)
+- Right-click context menu on all agent/backlog textareas to switch mode
+- `enterKeyMode` persisted in localStorage; `handleInputEnter()`, `openInputContextMenu()`, `setEnterMode()` functions
+- Applied to backlog input, agent task input, agent follow-up, agent log continue textareas
+
+### Dynamic domain system (new)
+- Domains fetched from server settings instead of hardcoded CSS classes
+- Domain filter buttons dynamically rendered via `renderDomainFilters()`
+- `domainsList` state; `fetchDomains()`, `getDomainConfig()`, `renderDomainFilters()` functions
+- `COLOR_PRESETS` constant (Blue, Purple, Green, Amber, Red, Gray)
+- Domain tags in tiles and modals use inline styles from `getDomainConfig()` instead of CSS classes
+- Server: `SETTINGS_PATH` (`data/settings.json`), `DEFAULT_DOMAINS`, `_load_settings()`, `_save_settings()`
+- Server endpoints: `GET /api/settings/domains`, `POST /api/settings/domains/add`, `PATCH /api/settings/domains/<id>`, `DELETE /api/settings/domains/<id>`
+
+### Project delete
+- Delete Project option in three-dot menu (danger-styled, with confirmation dialog)
+- `deleteProject()` function calls `DELETE /api/project/{id}`, closes modal, refreshes
+- Server: `DELETE /api/project/<id>` cleans up attachment files, agent log, kills running sessions, deletes project JSON
+
+### Plan file label
+- `planFileLabel()` generates a display label from task description (truncated, capitalized)
+- `openPlanFileViewer()` extracts first markdown heading from plan content as viewer title
+
+### Windows process window hiding
+- `_POPEN_FLAGS` uses `CREATE_NO_WINDOW` (not `DETACHED_PROCESS`); `_STARTUPINFO` with `SW_HIDE`
+- `_hide_process_windows()` uses ctypes to enumerate and hide windows by PID
+- `_hide_windows_delayed()` runs in background thread, calling hide 6 times over ~2.5 seconds
+- Background thread spawned after every Popen call (4 sites: dispatch, followup, auto-followup, and agent_followup)
+- `stdin=subprocess.DEVNULL` added to all Popen calls
+
+### Misc fixes
+- Fixed agent image preview remove button not appearing on hover (CSS selector mismatch)
+- Agent dispatch activity log now includes resume label
+- 1-second interval timer updates elapsed time displays for running sessions
+
+### Files Changed
+- server.py: Three-dot menu backend (delete project, domain CRUD, usage endpoint), `_build_claude_flags(project)` per-project model, token/usage capture in stream reader and completion logger, `_POPEN_FLAGS`/`_STARTUPINFO`/`_hide_process_windows()`/`_hide_windows_delayed()`, `stdin=DEVNULL` on all Popen calls
+- static/index.html: Three-dot menu system, token counter UI + context menu, session resume picker, enter key mode toggle, dynamic domain system, plan file labels, CSS for all new components
+
+---
+
 ## [2026-03-13] — User and agent name settings
 
 ### Done

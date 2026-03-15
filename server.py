@@ -4,6 +4,7 @@ import os
 import uuid
 import mimetypes
 import subprocess
+import sys
 import threading
 import time as _time
 from pathlib import Path
@@ -12,6 +13,45 @@ from flask import Flask, jsonify, send_from_directory, request, send_file, abort
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, 'static')
+_POPEN_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+_STARTUPINFO = None
+if sys.platform == 'win32':
+    _STARTUPINFO = subprocess.STARTUPINFO()
+    _STARTUPINFO.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    _STARTUPINFO.wShowWindow = 0  # SW_HIDE
+
+
+def _hide_process_windows(pid):
+    """Hide any console windows created by a process (Windows only)."""
+    if sys.platform != 'win32':
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+
+        @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+        def _cb(hwnd, _):
+            proc_id = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(proc_id))
+            if proc_id.value == pid:
+                user32.ShowWindow(hwnd, 0)  # SW_HIDE
+            return True
+
+        user32.EnumWindows(_cb, 0)
+    except Exception:
+        pass
+
+
+def _hide_windows_delayed(pid):
+    """Hide windows after a short delay to catch late-created consoles."""
+    import time
+    for _ in range(5):
+        time.sleep(0.3)
+        _hide_process_windows(pid)
+    # One final check after a longer wait
+    time.sleep(1)
+    _hide_process_windows(pid)
 
 app = Flask(__name__, static_folder=STATIC_DIR)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB max upload
@@ -76,13 +116,38 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 SHARED_RULES_PATH = Path(CONFIG.get('shared_rules_path', ''))
 PROJECTS_BASE = Path(CONFIG.get('projects_base', str(Path.home())))
+SETTINGS_PATH = Path(BASE_DIR) / 'data' / 'settings.json'
+
+DEFAULT_DOMAINS = [
+    {'id': 'general', 'label': 'General', 'color': 'var(--text-dim)', 'bg': 'var(--surface3)'},
+    {'id': 'trading', 'label': 'Trading', 'color': 'var(--accent)', 'bg': 'var(--accent-dim)'},
+    {'id': 'infra', 'label': 'Infra', 'color': 'var(--purple-text)', 'bg': 'var(--purple-dim)'},
+    {'id': 'hobby', 'label': 'Hobby', 'color': 'var(--amber-text)', 'bg': 'var(--amber-dim)'},
+]
+
+def _load_settings():
+    defaults = {'domains': list(DEFAULT_DOMAINS)}
+    if SETTINGS_PATH.exists():
+        try:
+            with open(SETTINGS_PATH, encoding='utf-8') as f:
+                saved = json.load(f)
+            for k, v in saved.items():
+                defaults[k] = v
+        except Exception:
+            pass
+    return defaults
+
+def _save_settings(settings):
+    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS_PATH.write_text(json.dumps(settings, indent=2, ensure_ascii=False), encoding='utf-8')
 
 
-def _build_claude_flags():
-    """Build common Claude CLI flags from config."""
+def _build_claude_flags(project=None):
+    """Build common Claude CLI flags from config, with optional per-project overrides."""
     flags = ['--print', '--verbose', '--output-format', 'stream-json',
              '--dangerously-skip-permissions']
-    model = CONFIG.get('agent_model', '')
+    # Per-project model takes priority over global config
+    model = (project or {}).get('agent_model', '') or CONFIG.get('agent_model', '')
     if model:
         flags.extend(['--model', model])
     max_turns = CONFIG.get('agent_max_turns', 0)
@@ -207,6 +272,43 @@ def update_project(project_id):
 
     save_project(project_id, existing)
     return jsonify({'ok': True, 'id': project_id})
+
+
+@app.route('/api/project/<project_id>', methods=['DELETE'])
+def delete_project(project_id):
+    filepath = DATA_DIR / f'{project_id}.json'
+    if not filepath.exists():
+        return jsonify({'error': 'not found'}), 404
+
+    # Clean up attachment files
+    p = load_project(project_id)
+    if p:
+        for item in p.get('backlog', []):
+            for att in item.get('attachments', []):
+                att_path = UPLOADS_DIR / att['stored_name']
+                if att_path.exists():
+                    att_path.unlink()
+
+    # Remove agent log file if exists
+    agent_log = DATA_DIR / f'{project_id}_agent_log.json'
+    if agent_log.exists():
+        agent_log.unlink()
+
+    # Kill any running agent sessions for this project
+    with agent_lock:
+        to_remove = [sid for sid, s in agent_sessions.items() if s['project_id'] == project_id]
+        for sid in to_remove:
+            session = agent_sessions[sid]
+            if session['status'] == 'running' and session.get('proc'):
+                try:
+                    session['proc'].kill()
+                except Exception:
+                    pass
+            agent_sessions.pop(sid, None)
+
+    # Delete project file
+    filepath.unlink()
+    return jsonify({'ok': True})
 
 
 # ── Backlog endpoints ────────────────────────────────────────────────────────
@@ -619,6 +721,13 @@ def _read_agent_stream(proc, session):
                     # Capture session_id from result as fallback
                     if 'session_id' in msg:
                         session['claude_session_id'] = msg['session_id']
+                    # Capture token usage and cost data
+                    if 'usage' in msg:
+                        session['usage'] = msg['usage']
+                    if 'cost_usd' in msg:
+                        session['cost_usd'] = msg['cost_usd']
+                    if 'num_turns' in msg:
+                        session['num_turns'] = msg['num_turns']
             except json.JSONDecodeError:
                 session['log_lines'].append(line)
     except Exception as e:
@@ -697,6 +806,9 @@ def _log_agent_completion(session):
         'session_id': session.get('session_id', ''),
         'claude_session_id': session.get('claude_session_id', ''),
         'started_at': session.get('started_at', ''),
+        'usage': session.get('usage', {}),
+        'cost_usd': session.get('cost_usd', 0),
+        'num_turns': session.get('num_turns', 0),
     }
     log = _load_agent_log(project_id)
     log.insert(0, entry)
@@ -721,22 +833,26 @@ def _auto_dispatch_followup(session, message):
     else:
         resume_flags = ['--continue']
 
-    cmd = ['claude', *resume_flags, '-p', message, *_build_claude_flags()]
+    cmd = ['claude', *resume_flags, '-p', message, *_build_claude_flags(p)]
 
     try:
         proc = subprocess.Popen(
             cmd,
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             cwd=pp,
             text=True,
             encoding='utf-8',
             errors='replace',
+            creationflags=_POPEN_FLAGS,
+            startupinfo=_STARTUPINFO,
         )
     except Exception as e:
         session['log_lines'].append(f'[follow-up failed: {e}]')
         return
 
+    threading.Thread(target=_hide_windows_delayed, args=(proc.pid,), daemon=True).start()
     session['proc'] = proc
     session['status'] = 'running'
     user_label = CONFIG.get('user_name') or 'User'
@@ -767,21 +883,26 @@ def agent_dispatch(project_id):
         session_id = uuid.uuid4().hex[:12]
 
         if resume_id:
-            cmd = ['claude', '-r', resume_id, '-p', task, *_build_claude_flags()]
+            cmd = ['claude', '-r', resume_id, '-p', task, *_build_claude_flags(p)]
         else:
             context = _build_agent_context(p)
-            cmd = ['claude', '-p', task, *_build_claude_flags(),
+            cmd = ['claude', '-p', task, *_build_claude_flags(p),
                    '--append-system-prompt', context]
 
         proc = subprocess.Popen(
             cmd,
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             cwd=pp,
             text=True,
             encoding='utf-8',
             errors='replace',
+            creationflags=_POPEN_FLAGS,
+            startupinfo=_STARTUPINFO,
         )
+
+        threading.Thread(target=_hide_windows_delayed, args=(proc.pid,), daemon=True).start()
 
         session = {
             'proc': proc,
@@ -797,7 +918,9 @@ def agent_dispatch(project_id):
         t = threading.Thread(target=_read_agent_stream, args=(proc, session), daemon=True)
         t.start()
 
-    _log_agent_activity(project_id, f"Agent dispatched: {task[:100]}")
+    resume_label = f" (resuming {resume_id})" if resume_id else ""
+    print(f"[dispatch] cmd: {' '.join(cmd)}")
+    _log_agent_activity(project_id, f"Agent dispatched{resume_label}: {task[:100]}")
     return jsonify({'ok': True, 'session_id': session_id})
 
 
@@ -824,7 +947,7 @@ def agent_stream(project_id):
             if session['status'] != 'running':
                 # Don't close if follow-ups are pending or being dispatched
                 if not session.get('pending_followups') and not session.get('_dispatching_followup'):
-                    yield f"data: {json.dumps({'type': 'status', 'status': session['status']})}\n\n"
+                    yield f"data: {json.dumps({'type': 'status', 'status': session['status'], 'usage': session.get('usage', {}), 'cost_usd': session.get('cost_usd', 0), 'num_turns': session.get('num_turns', 0)})}\n\n"
                     break
                 # Else: wait for follow-up auto-dispatch to restart the session
 
@@ -878,17 +1001,22 @@ def agent_followup(project_id):
         else:
             resume_flags = ['--continue']
 
-        cmd = ['claude', *resume_flags, '-p', message, *_build_claude_flags()]
+        cmd = ['claude', *resume_flags, '-p', message, *_build_claude_flags(p)]
 
         proc = subprocess.Popen(
             cmd,
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             cwd=pp,
             text=True,
             encoding='utf-8',
             errors='replace',
+            creationflags=_POPEN_FLAGS,
+            startupinfo=_STARTUPINFO,
         )
+
+        threading.Thread(target=_hide_windows_delayed, args=(proc.pid,), daemon=True).start()
 
         existing['proc'] = proc
         existing['status'] = 'running'
@@ -963,7 +1091,9 @@ def agent_session_delete(project_id):
         except Exception:
             pass
 
-    # Remove session from tracking
+    # Remove session from tracking.
+    # The stream reader thread has already called _log_agent_completion()
+    # in its finally block after proc.wait(), so usage data is persisted.
     with agent_lock:
         agent_sessions.pop(session_id, None)
 
@@ -1003,6 +1133,9 @@ def agent_status(project_id):
                 'log_lines': s['log_lines'],
                 'started_at': s['started_at'],
                 'plan_file': s.get('plan_file', ''),
+                'usage': s.get('usage', {}),
+                'cost_usd': s.get('cost_usd', 0),
+                'num_turns': s.get('num_turns', 0),
             })
     # Sort: running first, then newest first (ISO timestamps sort lexically)
     sessions.sort(key=lambda s: (
@@ -1024,6 +1157,49 @@ def get_agent_log(project_id):
         entry['ts_relative'] = time_ago(entry.get('ts'))
         entry['started_relative'] = time_ago(entry.get('started_at'))
     return jsonify(log)
+
+
+# ── Usage / token tracking ──────────────────────────────────────────────────
+
+@app.route('/api/usage')
+def api_usage():
+    """Aggregate token usage across all agent log files and running sessions.
+
+    Optional query param ?since=<ISO timestamp> to filter entries after a cutoff.
+    """
+    since = request.args.get('since', '')
+    total_input = 0
+    total_output = 0
+    total_cost = 0.0
+    total_sessions = 0
+    for f in DATA_DIR.glob('*_agent_log.json'):
+        try:
+            log = json.loads(f.read_text(encoding='utf-8'))
+            for entry in log:
+                if since and entry.get('ts', '') < since:
+                    continue
+                usage = entry.get('usage', {})
+                total_input += usage.get('input_tokens', 0)
+                total_output += usage.get('output_tokens', 0)
+                total_cost += entry.get('cost_usd', 0) or 0
+                total_sessions += 1
+        except Exception:
+            continue
+    # Include running sessions that haven't been logged yet
+    for s in agent_sessions.values():
+        if since and s.get('started_at', '') < since:
+            continue
+        usage = s.get('usage', {})
+        total_input += usage.get('input_tokens', 0)
+        total_output += usage.get('output_tokens', 0)
+        total_cost += s.get('cost_usd', 0) or 0
+    return jsonify({
+        'input_tokens': total_input,
+        'output_tokens': total_output,
+        'total_tokens': total_input + total_output,
+        'cost_usd': round(total_cost, 4),
+        'total_sessions': total_sessions,
+    })
 
 
 # ── Rules endpoints ─────────────────────────────────────────────────────────
@@ -1094,6 +1270,65 @@ def save_shared_rules():
 
     SHARED_RULES_PATH.parent.mkdir(parents=True, exist_ok=True)
     SHARED_RULES_PATH.write_text(content, encoding='utf-8')
+    return jsonify({'ok': True})
+
+
+# ── Domain settings ─────────────────────────────────────────────────────────
+
+@app.route('/api/settings/domains')
+def get_domains():
+    settings = _load_settings()
+    return jsonify(settings.get('domains', []))
+
+@app.route('/api/settings/domains/add', methods=['POST'])
+def add_domain():
+    data = request.get_json() or {}
+    domain_id = (data.get('id') or '').strip().lower().replace(' ', '_')
+    domain_id = ''.join(c for c in domain_id if c.isalnum() or c == '_')
+    if not domain_id:
+        return jsonify({'error': 'id required'}), 400
+    label = data.get('label', domain_id.capitalize())
+    color = data.get('color', 'var(--text-dim)')
+    bg = data.get('bg', 'var(--surface3)')
+    settings = _load_settings()
+    domains = settings.get('domains', [])
+    if any(d['id'] == domain_id for d in domains):
+        return jsonify({'error': 'domain already exists'}), 409
+    domains.append({'id': domain_id, 'label': label, 'color': color, 'bg': bg})
+    settings['domains'] = domains
+    _save_settings(settings)
+    return jsonify({'ok': True, 'domain': domains[-1]})
+
+@app.route('/api/settings/domains/<domain_id>', methods=['PATCH'])
+def update_domain(domain_id):
+    data = request.get_json() or {}
+    settings = _load_settings()
+    domains = settings.get('domains', [])
+    domain = next((d for d in domains if d['id'] == domain_id), None)
+    if not domain:
+        return jsonify({'error': 'not found'}), 404
+    if 'color' in data:
+        domain['color'] = data['color']
+    if 'bg' in data:
+        domain['bg'] = data['bg']
+    if 'label' in data:
+        domain['label'] = data['label']
+    settings['domains'] = domains
+    _save_settings(settings)
+    return jsonify({'ok': True})
+
+@app.route('/api/settings/domains/<domain_id>', methods=['DELETE'])
+def delete_domain(domain_id):
+    if domain_id == 'general':
+        return jsonify({'error': 'cannot delete general domain'}), 400
+    settings = _load_settings()
+    domains = settings.get('domains', [])
+    before = len(domains)
+    domains = [d for d in domains if d['id'] != domain_id]
+    if len(domains) == before:
+        return jsonify({'error': 'not found'}), 404
+    settings['domains'] = domains
+    _save_settings(settings)
     return jsonify({'ok': True})
 
 

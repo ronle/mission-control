@@ -273,6 +273,51 @@
   .modal-minimize:hover { background: var(--amber-dim); color: var(--amber-text); border-color: var(--amber); }
   .modal-close:hover { background: var(--red-dim); color: var(--red-text); border-color: var(--red); }
 
+  /* ── THREE-DOT MENU ────────────────────────────────────────── */
+  .modal-menu-btn {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: var(--surface3); border: 1px solid var(--border);
+    color: var(--text-dim); font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .modal-menu-btn:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+  .modal-menu-dropdown {
+    display: none; position: absolute; top: 36px; right: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; min-width: 200px; z-index: 50;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); overflow: hidden;
+  }
+  .modal-menu-dropdown.open { display: block; }
+  .modal-menu-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; cursor: pointer; font-size: 13px;
+    color: var(--text); transition: background 0.1s; border: none;
+    background: none; width: 100%; text-align: left;
+  }
+  .modal-menu-item:hover { background: var(--surface3); }
+  .modal-menu-item .menu-icon { width: 16px; text-align: center; color: var(--text-faint); font-size: 14px; }
+  .modal-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
+  .modal-menu-item.danger { color: var(--red-text); }
+  .modal-menu-item.danger .menu-icon { color: var(--red-text); }
+  .modal-menu-item.danger:hover { background: var(--red-dim); }
+
+  .modal-menu-sub {
+    display: none; background: var(--bg); border-top: 1px solid var(--border);
+  }
+  .modal-menu-sub.open { display: block; }
+  .modal-menu-sub-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px 8px 42px; cursor: pointer; font-size: 12px;
+    color: var(--text-dim); transition: background 0.1s; border: none;
+    background: none; width: 100%; text-align: left;
+  }
+  .modal-menu-sub-item:hover { background: var(--surface3); color: var(--text); }
+  .modal-menu-sub-item.active { color: var(--accent); font-weight: 600; }
+  .modal-menu-sub-dot {
+    width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
+  }
+
   /* ── MINIMIZED TRAY ──────────────────────────────────────────── */
   .minimized-tray {
     position: fixed;
@@ -507,7 +552,8 @@
     display: flex; align-items: center; justify-content: center;
     opacity: 0; transition: opacity 0.15s;
   }
-  .create-preview-item:hover .create-preview-remove { opacity: 1; }
+  .create-preview-item:hover .create-preview-remove,
+  .agent-image-preview:hover .create-preview-remove { opacity: 1; }
   .priority-select {
     background: var(--bg); border: 1px solid var(--border);
     color: var(--text-dim); font-family: 'Inter', sans-serif;
@@ -712,6 +758,51 @@
   }
   .btn-dispatch:hover { background: var(--green); color: var(--bg); }
   .btn-dispatch:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .session-picker { margin-bottom: 10px; }
+  .session-picker-label {
+    font-size: 11px; color: var(--text-faint); margin-bottom: 6px;
+    font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .session-picker-options {
+    display: flex; flex-direction: column; gap: 3px;
+    max-height: 150px; overflow-y: auto;
+  }
+  .session-picker-opt {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 8px; border-radius: 4px; cursor: pointer;
+    font-size: 12px; color: var(--text); transition: background 0.1s;
+    border: 1px solid transparent;
+  }
+  .session-picker-opt:hover { background: var(--bg-hover); }
+  .session-picker-opt.selected {
+    border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .session-picker-opt .sp-radio {
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid var(--border); box-sizing: border-box;
+  }
+  .session-picker-opt.selected .sp-radio {
+    border-color: var(--accent);
+    background: var(--accent);
+    box-shadow: inset 0 0 0 2px var(--bg);
+  }
+  .session-picker-opt .sp-label { flex: 1; min-width: 0; }
+  .session-picker-opt .sp-task {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .session-picker-opt .sp-meta {
+    font-size: 10px; color: var(--text-faint);
+  }
+  .resume-indicator {
+    font-size: 11px; color: var(--accent); margin-bottom: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .resume-indicator .ri-clear {
+    color: var(--text-faint); cursor: pointer; font-size: 10px;
+    text-decoration: underline;
+  }
+  .resume-indicator .ri-clear:hover { color: var(--text); }
 
   .btn-stop {
     background: var(--red-dim); border: 1px solid var(--red);
@@ -1053,29 +1144,32 @@
   .name-edit:hover { border-color: var(--border); }
   .name-edit:focus { border-color: var(--accent); background: var(--bg); }
 
-  .domain-select-wrap {
-    position: relative; display: inline-block;
+  .new-proj-domain-wrap {
+    position: relative; display: inline-block; width: 100%;
   }
-  .domain-tag.editable { cursor: pointer; }
-  .domain-tag.editable:hover { filter: brightness(1.3); }
-  .domain-dropdown {
-    position: absolute; top: 100%; left: 0; margin-top: 4px;
+  .new-proj-domain-trigger {
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 5px; font-size: 13px; color: var(--text); width: 100%; box-sizing: border-box;
+  }
+  .new-proj-domain-trigger:hover { border-color: var(--accent); }
+  .new-proj-domain-dd {
+    position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px;
     background: var(--surface); border: 1px solid var(--border2);
     border-radius: 6px; overflow: hidden; z-index: 200;
     box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-    min-width: 110px;
     display: none;
   }
-  .domain-dropdown.open { display: block; }
-  .domain-dropdown-item {
-    padding: 6px 12px; font-size: 11px; font-weight: 600;
-    letter-spacing: 0.8px; text-transform: uppercase;
+  .new-proj-domain-dd.open { display: block; }
+  .new-proj-domain-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; font-size: 12px;
     cursor: pointer; transition: background 0.1s;
     border: none; background: none; width: 100%; text-align: left;
-    display: block;
+    color: var(--text-dim);
   }
-  .domain-dropdown-item:hover { background: var(--surface3); }
-  .domain-dropdown-item.active { background: var(--accent-dim); }
+  .new-proj-domain-item:hover { background: var(--surface3); color: var(--text); }
+  .new-proj-domain-item.active { color: var(--accent); font-weight: 600; }
 
   /* ── NEW PROJECT BUTTON ─────────────────────────────────────── */
   .btn-new-project {
@@ -1092,6 +1186,55 @@
     cursor: pointer; transition: all 0.15s; white-space: nowrap;
   }
   .btn-header-action:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── TOKEN COUNTERS ────────────────────────────────────────── */
+  .token-counter-global {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text-faint); padding: 4px 10px;
+    border: 1px solid var(--border); border-radius: 5px;
+    cursor: pointer; white-space: nowrap; position: relative;
+    user-select: none;
+  }
+  .token-counter-global .tc-icon { font-size: 13px; }
+  .token-counter-global .tc-cost { color: var(--green-text); font-weight: 500; }
+  .token-counter-global .tc-mode {
+    font-size: 9px; color: var(--text-faint); text-transform: uppercase;
+    letter-spacing: 0.5px; opacity: 0.7;
+  }
+  .tc-context-menu {
+    display: none; position: fixed; z-index: 999;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; min-width: 170px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); overflow: hidden;
+    padding: 4px 0;
+  }
+  .tc-context-menu.open { display: block; }
+  .tc-ctx-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px; cursor: pointer; font-size: 12px;
+    color: var(--text); border: none; background: none;
+    width: 100%; text-align: left; transition: background 0.1s;
+  }
+  .tc-ctx-item:hover { background: var(--surface3); }
+  .tc-ctx-item.active { color: var(--accent); font-weight: 600; }
+  .tc-ctx-item .ctx-check { width: 14px; text-align: center; font-size: 11px; }
+  .tc-ctx-sep { height: 1px; background: var(--border); margin: 4px 0; }
+  .token-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text-faint); padding: 2px 8px;
+    background: var(--surface3); border-radius: 4px;
+    white-space: nowrap; min-width: 0;
+  }
+  .token-badge:empty { display: none; }
+  }
+  .token-badge .tb-cost { color: var(--green-text); }
+  .agent-log-usage {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text-faint); margin-top: 2px;
+  }
+  .agent-log-usage .alu-cost { color: var(--green-text); }
 
   .shared-rules-editor {
     padding: 28px; display: flex; flex-direction: column;
@@ -1259,6 +1402,13 @@
     <span class="tagline">Project Intelligence</span>
   </div>
   <div class="header-right">
+    <span class="token-counter-global" id="global-token-counter" title="Click to change time range" onclick="openTokenContextMenu(event)">
+      <span class="tc-icon">&#x26A1;</span>
+      <span id="global-tc-tokens">—</span>
+      <span class="tc-cost" id="global-tc-cost"></span>
+      <span class="tc-mode" id="global-tc-mode"></span>
+    </span>
+    <div class="tc-context-menu" id="tc-context-menu"></div>
     <button class="btn-header-action" onclick="openSharedRulesEditor()">Shared Rules</button>
     <button class="btn-new-project" onclick="openNewProjectForm()">+ New</button>
     <span class="refresh-timer" id="refresh-timer">refresh in 30s</span>
@@ -1275,9 +1425,7 @@
   <button class="filter-btn" data-filter="blocked">Blocked</button>
   <button class="filter-btn" data-filter="waiting">Waiting</button>
   <button class="filter-btn" data-filter="parked">Parked</button>
-  <button class="filter-btn" data-filter="trading">Trading</button>
-  <button class="filter-btn" data-filter="infra">Infra</button>
-  <button class="filter-btn" data-filter="hobby">Hobby</button>
+  <span id="domain-filters"></span>
 </div>
 
 <div class="main">
@@ -1315,6 +1463,35 @@ let modalActiveTab = {};  // projectId → 'backlog' | 'agent' | 'agent-log' | '
 let refreshCountdown = 30;
 let refreshInterval, countdownInterval;
 let lastDragEnd = 0;
+let domainsList = [];
+let newProjDomain = 'general';
+
+const COLOR_PRESETS = [
+  { label: 'Blue',   color: 'var(--accent)',      bg: 'var(--accent-dim)' },
+  { label: 'Purple', color: 'var(--purple-text)', bg: 'var(--purple-dim)' },
+  { label: 'Green',  color: 'var(--green-text)',  bg: 'var(--green-dim)' },
+  { label: 'Amber',  color: 'var(--amber-text)',  bg: 'var(--amber-dim)' },
+  { label: 'Red',    color: 'var(--red-text)',    bg: 'var(--red-dim)' },
+  { label: 'Gray',   color: 'var(--text-dim)',    bg: 'var(--surface3)' },
+];
+
+async function fetchDomains() {
+  try {
+    const res = await fetch(API_BASE + '/api/settings/domains');
+    domainsList = await res.json();
+  } catch(e) {
+    domainsList = [
+      {id:'general', label:'General', color:'var(--text-dim)', bg:'var(--surface3)'},
+      {id:'trading', label:'Trading', color:'var(--accent)', bg:'var(--accent-dim)'},
+      {id:'infra', label:'Infra', color:'var(--purple-text)', bg:'var(--purple-dim)'},
+      {id:'hobby', label:'Hobby', color:'var(--amber-text)', bg:'var(--amber-dim)'},
+    ];
+  }
+}
+
+function getDomainConfig(domainId) {
+  return domainsList.find(d => d.id === domainId) || {id: domainId, label: domainId, color: 'var(--text-dim)', bg: 'var(--surface3)'};
+}
 
 async function fetchProjects() {
   try {
@@ -1365,6 +1542,18 @@ function setFilter(f) {
   renderProjects();
 }
 
+function renderDomainFilters() {
+  const container = document.getElementById('domain-filters');
+  if (!container) return;
+  container.innerHTML = domainsList
+    .filter(d => d.id !== 'general')
+    .map(d => `<button class="filter-btn${activeFilter===d.id?' active':''}" data-filter="${esc(d.id)}">${esc(d.label || d.id)}</button>`)
+    .join('');
+  container.querySelectorAll('.filter-btn').forEach(b =>
+    b.addEventListener('click', () => setFilter(b.dataset.filter))
+  );
+}
+
 function filterProjects() {
   if (activeFilter === 'all') return allProjects;
   if (['active','blocked','waiting','parked'].includes(activeFilter))
@@ -1395,7 +1584,7 @@ function hasRunningAgent(projectId) {
 
 function tileHTML(p) {
   const sc = `status-${p.status||'unknown'}`;
-  const dc = `domain-${p.domain||'general'}`;
+  const domCfg = getDomainConfig(p.domain||'general');
   const backlog = p.backlog || [];
   const openItems = backlog.filter(i => i.status === 'open');
   const backlogBadge = openItems.length
@@ -1414,7 +1603,7 @@ function tileHTML(p) {
     <div class="card-header">
       <div class="card-title-row">
         <span class="project-name">${esc(p.name||p.id)}</span>
-        <span class="domain-tag ${dc}">${esc(p.domain||'general')}</span>
+        <span class="domain-tag" style="background:${domCfg.bg};color:${domCfg.color}">${esc(domCfg.label||p.domain||'general')}</span>
       </div>
       <div style="display:flex;align-items:center;gap:6px">
         <span class="status-pill ${sc}">${esc(p.status||'unknown')}</span>
@@ -1435,7 +1624,6 @@ function tileHTML(p) {
 
 function modalContentHTML(p) {
   const sc = `status-${p.status||'unknown'}`;
-  const dc = `domain-${p.domain||'general'}`;
   const showDone = showDoneMap[p.id] || false;
   const backlog = p.backlog || [];
   const openItems = backlog.filter(i => i.status === 'open');
@@ -1503,8 +1691,78 @@ function modalContentHTML(p) {
   return `
     <div class="modal-header ${sc}">
       <div class="modal-window-controls">
+        <button class="modal-menu-btn" onclick="toggleModalMenu(event,'${esc(p.id)}')" title="Menu">&#x22EE;</button>
         <button class="modal-minimize" onclick="minimizeModal('${esc(p.id)}')" title="Minimize">&#x2015;</button>
         <button class="modal-close" onclick="closeModalById('${esc(p.id)}')" title="Close">&#10005;</button>
+        <div class="modal-menu-dropdown" id="modal-menu-${esc(p.id)}">
+          <button class="modal-menu-item" onclick="toggleModalMenuSub(event,'status-sub-${esc(p.id)}')">
+            <span class="menu-icon">&#x25CF;</span> Change Status <span style="margin-left:auto;color:var(--text-faint);font-size:11px">&#x25B8;</span>
+          </button>
+          <div class="modal-menu-sub" id="status-sub-${esc(p.id)}">
+            <button class="modal-menu-sub-item${(p.status||'')==='active'?' active':''}" onclick="setProjectStatus('${esc(p.id)}','active')">
+              <span class="modal-menu-sub-dot" style="background:var(--green)"></span> Active</button>
+            <button class="modal-menu-sub-item${(p.status||'')==='waiting'?' active':''}" onclick="setProjectStatus('${esc(p.id)}','waiting')">
+              <span class="modal-menu-sub-dot" style="background:var(--amber)"></span> Waiting</button>
+            <button class="modal-menu-sub-item${(p.status||'')==='blocked'?' active':''}" onclick="setProjectStatus('${esc(p.id)}','blocked')">
+              <span class="modal-menu-sub-dot" style="background:var(--red)"></span> Blocked</button>
+            <button class="modal-menu-sub-item${(p.status||'')==='parked'?' active':''}" onclick="setProjectStatus('${esc(p.id)}','parked')">
+              <span class="modal-menu-sub-dot" style="background:var(--text-faint)"></span> Parked</button>
+          </div>
+          <button class="modal-menu-item" onclick="toggleModalMenuSub(event,'domain-sub-${esc(p.id)}')">
+            <span class="menu-icon">&#x25CF;</span> Change Domain <span style="margin-left:auto;color:var(--text-faint);font-size:11px">&#x25B8;</span>
+          </button>
+          <div class="modal-menu-sub" id="domain-sub-${esc(p.id)}">
+            ${domainsList.map(d => {
+              const cfg = getDomainConfig(d.id);
+              return `<button class="modal-menu-sub-item${(p.domain||'general')===d.id?' active':''}" onclick="saveDomainFromMenu(event,'${esc(p.id)}','${d.id}')">
+              <span class="modal-menu-sub-dot" style="background:${cfg.color}"></span> ${esc(d.label||d.id)}</button>`;
+            }).join('')}
+            <div style="border-top:1px solid var(--border);padding:6px 8px">
+              <div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Color</div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap">
+                ${COLOR_PRESETS.map(c =>
+                  `<button style="width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:${c.bg};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"
+                    title="${c.label}"
+                    onclick="setDomainColorFromMenu(event,'${esc(p.id)}','${esc(p.domain||'general')}','${c.color}','${c.bg}')"><span style="width:8px;height:8px;border-radius:2px;background:${c.color}"></span></button>`
+                ).join('')}
+              </div>
+            </div>
+            <div style="border-top:1px solid var(--border);padding:4px">
+              <input type="text" placeholder="New domain..." style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 8px;border-radius:4px;outline:none;box-sizing:border-box"
+                onclick="event.stopPropagation()"
+                onkeydown="if(event.key==='Enter'){event.stopPropagation();addDomainFromMenu(event,'${esc(p.id)}',this.value)}">
+            </div>
+          </div>
+          <button class="modal-menu-item" onclick="toggleModalMenuSub(event,'model-sub-${esc(p.id)}')">
+            <span class="menu-icon">&#x2699;</span> Agent Model ${p.agent_model ? `<span style="margin-left:4px;color:var(--accent);font-size:11px">${esc(p.agent_model)}</span>` : '<span style="margin-left:4px;color:var(--text-faint);font-size:11px">default</span>'} <span style="margin-left:auto;color:var(--text-faint);font-size:11px">&#x25B8;</span>
+          </button>
+          <div class="modal-menu-sub" id="model-sub-${esc(p.id)}">
+            <button class="modal-menu-sub-item${!p.agent_model?' active':''}" onclick="setProjectModel('${esc(p.id)}','')">
+              <span class="modal-menu-sub-dot" style="background:var(--text-faint)"></span> Default (global)</button>
+            <button class="modal-menu-sub-item${p.agent_model==='claude-sonnet-4-5-20250929'?' active':''}" onclick="setProjectModel('${esc(p.id)}','claude-sonnet-4-5-20250929')">
+              <span class="modal-menu-sub-dot" style="background:var(--green)"></span> Sonnet 4.5</button>
+            <button class="modal-menu-sub-item${p.agent_model==='claude-opus-4-6'?' active':''}" onclick="setProjectModel('${esc(p.id)}','claude-opus-4-6')">
+              <span class="modal-menu-sub-dot" style="background:var(--amber)"></span> Opus 4.6</button>
+            <button class="modal-menu-sub-item${p.agent_model==='claude-haiku-4-5-20251001'?' active':''}" onclick="setProjectModel('${esc(p.id)}','claude-haiku-4-5-20251001')">
+              <span class="modal-menu-sub-dot" style="background:var(--blue)"></span> Haiku 4.5</button>
+          </div>
+          <button class="modal-menu-item" onclick="editProjectDescription('${esc(p.id)}')">
+            <span class="menu-icon">&#x270E;</span> ${p.description ? 'Edit' : 'Add'} Description
+          </button>
+          <button class="modal-menu-item" onclick="toggleModalMenuSub(event,'enter-sub-${esc(p.id)}')">
+            <span class="menu-icon">&#x21B5;</span> Enter Key ${enterKeyMode === 'enter' ? '<span style="margin-left:4px;color:var(--accent);font-size:11px">sends</span>' : '<span style="margin-left:4px;color:var(--text-faint);font-size:11px">new line</span>'} <span style="margin-left:auto;color:var(--text-faint);font-size:11px">&#x25B8;</span>
+          </button>
+          <div class="modal-menu-sub" id="enter-sub-${esc(p.id)}">
+            <button class="modal-menu-sub-item${enterKeyMode==='ctrl-enter'?' active':''}" onclick="setEnterMode('ctrl-enter')">
+              Ctrl+Enter sends</button>
+            <button class="modal-menu-sub-item${enterKeyMode==='enter'?' active':''}" onclick="setEnterMode('enter')">
+              Enter sends</button>
+          </div>
+          <div class="modal-menu-sep"></div>
+          <button class="modal-menu-item danger" onclick="deleteProject('${esc(p.id)}')">
+            <span class="menu-icon">&#x1F5D1;</span> Delete Project
+          </button>
+        </div>
       </div>
       <div class="card-title-row" style="margin-bottom:8px">
         <input class="name-edit" type="text" value="${esc(p.name||p.id)}"
@@ -1512,15 +1770,7 @@ function modalContentHTML(p) {
           onkeydown="if(event.key==='Enter'){this.blur()}"
           oninput="autoSizeNameInput(this)"
         >
-        <div class="domain-select-wrap">
-          <span class="domain-tag ${dc} editable" onclick="toggleDomainDropdown(event,'${esc(p.id)}')">${esc(p.domain||'general')}</span>
-          <div class="domain-dropdown" id="domain-dd-${esc(p.id)}">
-            ${['general','trading','infra','hobby'].map(d =>
-              `<button class="domain-dropdown-item domain-${d}${(p.domain||'general')===d?' active':''}"
-                onclick="saveDomain(event,'${esc(p.id)}','${d}')">${d}</button>`
-            ).join('')}
-          </div>
-        </div>
+        ${(() => { const cfg = getDomainConfig(p.domain||'general'); return `<span class="domain-tag" style="background:${cfg.bg};color:${cfg.color}">${esc(cfg.label||p.domain||'general')}</span>`; })()}
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="status-pill ${sc}">${esc(p.status||'unknown')}</span>
@@ -1570,7 +1820,7 @@ function modalContentHTML(p) {
           <div class="backlog-add">
             <textarea spellcheck="true" class="backlog-input" id="backlog-input-${esc(p.id)}" rows="2"
               placeholder="Add action item... (paste/drop images here)"
-              onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();addBacklogItem('${esc(p.id)}')}"
+              onkeydown="handleInputEnter(event,()=>addBacklogItem('${esc(p.id)}'))"
               onpaste="handleCreatePaste(event,'${esc(p.id)}')"
               ondragover="createDragOver(event,'${esc(p.id)}')"
               ondragleave="createDragLeave('${esc(p.id)}')"
@@ -1693,6 +1943,95 @@ function closeModalById(modalId) {
 
 function closeModal() {
   if (focusedModalId) closeModalById(focusedModalId);
+}
+
+// ── Three-dot Modal Menu ──────────────────────────────────────────────────────
+
+function toggleModalMenu(e, projectId) {
+  e.stopPropagation();
+  const dd = document.getElementById(`modal-menu-${projectId}`);
+  if (!dd) return;
+  const isOpen = dd.classList.contains('open');
+  // Close all open modal menus first
+  document.querySelectorAll('.modal-menu-dropdown.open').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.modal-menu-sub.open').forEach(d => d.classList.remove('open'));
+  if (!isOpen) {
+    dd.classList.add('open');
+    const close = (ev) => {
+      if (!dd.contains(ev.target) && !ev.target.closest('.modal-menu-btn')) {
+        dd.classList.remove('open');
+        dd.querySelectorAll('.modal-menu-sub.open').forEach(s => s.classList.remove('open'));
+        document.removeEventListener('mousedown', close);
+      }
+    };
+    setTimeout(() => document.addEventListener('mousedown', close), 0);
+  }
+}
+
+function toggleModalMenuSub(e, subId) {
+  e.stopPropagation();
+  const sub = document.getElementById(subId);
+  if (!sub) return;
+  sub.classList.toggle('open');
+}
+
+async function setProjectStatus(projectId, status) {
+  document.querySelectorAll('.modal-menu-dropdown.open').forEach(d => d.classList.remove('open'));
+  try {
+    await fetch(API_BASE + `/api/project/${projectId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ status })
+    });
+    await refreshSilent();
+  } catch(e) {}
+}
+
+async function setProjectModel(projectId, model) {
+  document.querySelectorAll('.modal-menu-dropdown.open').forEach(d => d.classList.remove('open'));
+  try {
+    await fetch(API_BASE + `/api/project/${projectId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ agent_model: model })
+    });
+    await refreshSilent();
+  } catch(e) {}
+}
+
+function editProjectDescription(projectId) {
+  document.querySelectorAll('.modal-menu-dropdown.open').forEach(d => d.classList.remove('open'));
+  const p = allProjects.find(x => x.id === projectId);
+  if (!p) return;
+  const current = p.description || '';
+  const val = prompt('Project description:', current);
+  if (val === null) return; // cancelled
+  (async () => {
+    try {
+      await fetch(API_BASE + `/api/project/${projectId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ description: val })
+      });
+      await refreshSilent();
+    } catch(e) {}
+  })();
+}
+
+async function deleteProject(projectId) {
+  document.querySelectorAll('.modal-menu-dropdown.open').forEach(d => d.classList.remove('open'));
+  const p = allProjects.find(x => x.id === projectId);
+  const name = p ? (p.name || p.id) : projectId;
+  if (!confirm(`Delete project "${name}"?\n\nThis will permanently remove the project and all its data.`)) return;
+  try {
+    const r = await fetch(API_BASE + `/api/project/${projectId}`, { method: 'DELETE' });
+    if (r.ok) {
+      closeModalById(projectId);
+      await refreshSilent();
+    } else {
+      alert('Failed to delete project.');
+    }
+  } catch(e) { alert('Failed to delete project.'); }
 }
 
 function minimizeModal(modalId) {
@@ -2168,10 +2507,9 @@ function renderFeed() {
     (p.activity_log||[]).forEach(e => entries.push({...e, project: p.name||p.id, domain: p.domain}));
   });
   entries.sort((a,b) => (b.ts||'').localeCompare(a.ts||''));
-  const colors = {trading:'var(--accent)', infra:'var(--purple-text)', hobby:'var(--amber-text)'};
   document.getElementById('feed-entries').innerHTML = entries.slice(0,40).map(e => `
     <div class="feed-entry">
-      <div class="feed-entry-project" style="color:${colors[e.domain]||'var(--text-dim)'}">${esc(e.project)}</div>
+      <div class="feed-entry-project" style="color:${getDomainConfig(e.domain).color}">${esc(e.project)}</div>
       <div class="feed-entry-msg">${esc(e.msg||'')}</div>
       <div class="feed-entry-ts">${esc(e.ts_relative||e.ts||'')}</div>
     </div>`).join('') || '<div class="loading">No activity</div>';
@@ -2185,10 +2523,168 @@ async function refreshSilent() {
   applyOrder();
   render();
   refreshModal();
+  fetchGlobalUsage();
 }
 
 function esc(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Token Usage Helpers ─────────────────────────────────────────────────────
+
+const TOKEN_MODES = [
+  { id: 'all',     label: 'All Time' },
+  { id: 'today',   label: 'Today' },
+  { id: 'week',    label: 'This Week' },
+  { id: 'month',   label: 'This Month' },
+];
+
+let tokenCounterMode = localStorage.getItem('tc_mode') || 'all';
+
+function formatTokens(n) {
+  if (!n || n === 0) return '0';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'k';
+  return String(n);
+}
+
+function formatCost(usd) {
+  if (!usd || usd === 0) return '';
+  if (usd < 0.01) return '$' + usd.toFixed(4);
+  return '$' + usd.toFixed(2);
+}
+
+function tokenBadgeHTML(usage, costUsd) {
+  const inp = (usage && usage.input_tokens) || 0;
+  const out = (usage && usage.output_tokens) || 0;
+  const total = inp + out;
+  if (!total) return '';
+  const cost = formatCost(costUsd);
+  return `<span class="token-badge">${formatTokens(total)} tokens${cost ? ` <span class="tb-cost">${cost}</span>` : ''}</span>`;
+}
+
+function getTokenSince(mode) {
+  const now = new Date();
+  if (mode === 'today') {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return d.toISOString();
+  } else if (mode === 'week') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - d.getDay()); // start of week (Sunday)
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  } else if (mode === 'month') {
+    const d = new Date(now.getFullYear(), now.getMonth(), 1);
+    return d.toISOString();
+  }
+  return ''; // 'all' — no filter
+}
+
+async function fetchGlobalUsage() {
+  try {
+    const since = getTokenSince(tokenCounterMode);
+    const url = API_BASE + '/api/usage' + (since ? `?since=${encodeURIComponent(since)}` : '');
+    const r = await fetch(url);
+    const d = await r.json();
+    const tokensEl = document.getElementById('global-tc-tokens');
+    const costEl = document.getElementById('global-tc-cost');
+    const modeEl = document.getElementById('global-tc-mode');
+    if (tokensEl) tokensEl.textContent = formatTokens(d.total_tokens) + ' tokens';
+    if (costEl) {
+      const cost = formatCost(d.cost_usd);
+      costEl.textContent = cost ? cost : '';
+    }
+    if (modeEl) {
+      const m = TOKEN_MODES.find(m => m.id === tokenCounterMode);
+      modeEl.textContent = (tokenCounterMode === 'all') ? '' : m ? m.label : '';
+    }
+  } catch(e) {}
+}
+
+function openTokenContextMenu(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const menu = document.getElementById('tc-context-menu');
+  if (!menu) return;
+
+  menu.innerHTML = TOKEN_MODES.map(m =>
+    `<button class="tc-ctx-item${tokenCounterMode === m.id ? ' active' : ''}" onclick="setTokenMode('${m.id}')">
+      <span class="ctx-check">${tokenCounterMode === m.id ? '&#x2713;' : ''}</span> ${m.label}
+    </button>`
+  ).join('');
+
+  menu.classList.add('open');
+  menu.style.left = Math.min(e.clientX, window.innerWidth - 190) + 'px';
+  menu.style.top = Math.min(e.clientY, window.innerHeight - 200) + 'px';
+
+  const close = (ev) => {
+    if (!menu.contains(ev.target)) {
+      menu.classList.remove('open');
+      document.removeEventListener('mousedown', close);
+    }
+  };
+  setTimeout(() => document.addEventListener('mousedown', close), 0);
+}
+
+function setTokenMode(mode) {
+  tokenCounterMode = mode;
+  localStorage.setItem('tc_mode', mode);
+  document.getElementById('tc-context-menu')?.classList.remove('open');
+  fetchGlobalUsage();
+}
+
+// ── Enter Key Behavior ──────────────────────────────────────────────────────
+
+// 'enter' = Enter sends, Shift+Enter for newline
+// 'ctrl-enter' = Ctrl/Cmd+Enter sends, Enter for newline (default)
+let enterKeyMode = localStorage.getItem('enter_mode') || 'ctrl-enter';
+
+function handleInputEnter(event, sendFn) {
+  if (event.key !== 'Enter') return;
+  if (enterKeyMode === 'enter') {
+    // Enter sends, Shift+Enter for newline
+    if (event.shiftKey) return; // allow newline
+    event.preventDefault();
+    sendFn();
+  } else {
+    // Ctrl/Cmd+Enter sends (default)
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      sendFn();
+    }
+  }
+}
+
+function setEnterMode(mode) {
+  enterKeyMode = mode;
+  localStorage.setItem('enter_mode', mode);
+  document.querySelectorAll('.modal-menu-dropdown.open').forEach(d => d.classList.remove('open'));
+  refreshModal();
+}
+
+function formatElapsed(startedAt) {
+  if (!startedAt) return '';
+  const s = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+  if (s < 0) return '0s';
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+  return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+}
+
+function sessionMetricsHTML(session) {
+  if (!session) return '';
+  const usage = session.usage;
+  const total = usage ? ((usage.input_tokens || 0) + (usage.output_tokens || 0)) : 0;
+  if (session.status === 'running') {
+    const elapsed = formatElapsed(session.startedAt);
+    return elapsed ? `&#x23F1; ${elapsed}` : '';
+  }
+  // Completed/stopped/error — show tokens if available
+  if (total) {
+    const cost = formatCost(session.cost_usd);
+    return `${formatTokens(total)} tokens${cost ? ` <span class="tb-cost">${cost}</span>` : ''}`;
+  }
+  return '';
 }
 
 // ── Agent Panel ─────────────────────────────────────────────────────────────
@@ -2199,10 +2695,23 @@ let agentOutputBuffers = {};   // session_id → string[]
 let agentStatusCache = {};     // session_id → {status, task, projectId, startedAt}
 let agentHistory = [];         // [{projectId, sessionId, projectName, task, status, startedAt}]
 let activeAgentTab = {};       // project_id → session_id (which tab is active in modal)
+
+// Update elapsed timers for running sessions every second
+setInterval(() => {
+  for (const [sid, cached] of Object.entries(agentStatusCache)) {
+    if (cached.status !== 'running') continue;
+    const el = document.getElementById(`session-metrics-${sid}`);
+    if (el) {
+      const elapsed = formatElapsed(cached.startedAt);
+      if (elapsed) el.innerHTML = `&#x23F1; ${elapsed}`;
+    }
+  }
+}, 1000);
 let agentPendingImages = {};   // key (projectId or sessionId) → [{file, objectUrl, serverPath}]
 let acOpenSessions = new Set(); // session_id → expanded in console
 let acExpanded = false;
 let planViewerContent = {};    // session_id → string[] of raw plan text lines
+let pendingResumeId = {};      // project_id → claude_session_id to resume (null = fresh)
 
 function getProjectSessions(projectId) {
   return agentHistory.filter(h => h.projectId === projectId);
@@ -2238,15 +2747,36 @@ function agentPanelHTML(p) {
     ? `<div class="agent-tab-bar">${tabsHTML}<button class="agent-tab-new" onclick="newAgentTab('${esc(p.id)}')">+ New</button></div>`
     : '';
 
+  // Session picker (shown when no active tab)
+  const noActiveTab = !activeSession || !activeSessionId;
+  if (noActiveTab) {
+    // Auto-load agent log and set default resume on first render
+    if (!agentLogCache[p.id]) {
+      loadAgentLog(p.id);
+    } else if (!(p.id in pendingResumeId)) {
+      pendingResumeId[p.id] = getDefaultResumeId(p.id);
+    }
+  }
+  const picker = noActiveTab ? sessionPickerHTML(p.id) : '';
+
+  // Resume indicator (shown when a prior session is selected)
+  const resumeId = pendingResumeId[p.id] || null;
+  const resumeIndicator = (noActiveTab && resumeId) ? (() => {
+    const entries = agentLogCache[p.id] || [];
+    const entry = entries.find(e => e.claude_session_id === resumeId);
+    const label = entry ? (entry.task || '').substring(0, 50) : resumeId.substring(0, 12);
+    return `<div class="resume-indicator">Resuming: ${esc(label)} <span class="ri-clear" onclick="selectResumeSession('${esc(p.id)}','')">clear</span></div>`;
+  })() : '';
+
   // Dispatch row (always visible)
   const dispatchPreviews = renderAgentImagePreviews(p.id);
-  const dispatchRow = `<div class="agent-input-row">
+  const dispatchRow = `${picker}${resumeIndicator}<div class="agent-input-row">
     <textarea spellcheck="true" class="agent-task-input" id="agent-task-${esc(p.id)}" rows="1"
       placeholder="Describe a task for the agent... (paste screenshots here)"
-      onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();dispatchAgent('${esc(p.id)}')}"
+      onkeydown="handleInputEnter(event,()=>dispatchAgent('${esc(p.id)}'))"
       onpaste="handleAgentPaste(event,'${esc(p.id)}')"
     ></textarea>
-    <button class="btn-dispatch" onclick="dispatchAgent('${esc(p.id)}')">Dispatch</button>
+    <button class="btn-dispatch" onclick="dispatchAgent('${esc(p.id)}')">${resumeId ? 'Continue' : 'Dispatch'}</button>
   </div>
   ${dispatchPreviews}`;
 
@@ -2321,7 +2851,7 @@ function agentPanelHTML(p) {
           <div class="agent-chat-input-row">
             <textarea spellcheck="true" class="agent-task-input" id="agent-followup-${esc(activeSessionId)}" rows="1"
               placeholder="Send follow-up... (paste screenshots here)"
-              onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();sendFollowup('${esc(p.id)}','${esc(activeSessionId)}')}"
+              onkeydown="handleInputEnter(event,()=>sendFollowup('${esc(p.id)}','${esc(activeSessionId)}'))"
               onpaste="handleAgentPaste(event,'fu_${esc(activeSessionId)}')"
             ></textarea>
             <button class="btn-dispatch" onclick="sendFollowup('${esc(p.id)}','${esc(activeSessionId)}')">Send</button>
@@ -2331,7 +2861,8 @@ function agentPanelHTML(p) {
     const planFileBtn = activeSession && activeSession.planFile
       ? (() => {
           const fname = activeSession.planFile.split(/[/\\]/).pop();
-          return `<button class="btn-plan-file" onclick="openPlanFileViewer('${esc(p.id)}','${esc(activeSessionId)}')" title="Open ${esc(fname)}">&#128196; ${esc(fname)}</button>`;
+          const label = planFileLabel(activeSession.task || fname);
+          return `<button class="btn-plan-file" onclick="openPlanFileViewer('${esc(p.id)}','${esc(activeSessionId)}')" title="${esc(fname)}">&#128196; ${esc(label)}</button>`;
         })()
       : '';
     tabContent = `
@@ -2339,6 +2870,7 @@ function agentPanelHTML(p) {
         <span class="agent-status-dot ${st}"></span>
         <span class="agent-status-label ${st}">${st}</span>
         ${stopBtn}
+        <span class="token-badge" id="session-metrics-${esc(activeSessionId)}">${activeSession ? sessionMetricsHTML(activeSession) : ''}</span>
         <span class="agent-activity" id="agent-activity-${esc(activeSessionId)}"></span>
         <span id="plan-file-btn-${esc(activeSessionId)}">${planFileBtn}</span>
         <button class="btn-popout" onclick="openPlanViewer('${esc(activeSessionId)}')" title="Open output in viewer window">Pop Out &#8599;</button>
@@ -2366,10 +2898,88 @@ function switchAgentTab(projectId, sessionId) {
 }
 
 function newAgentTab(projectId) {
-  // Clear active tab so the panel shows just the dispatch input
+  // Clear active tab so the panel shows just the dispatch input + session picker
   delete activeAgentTab[projectId];
+  // Reset to default (agentPanelHTML will auto-load log and set default resume)
+  delete pendingResumeId[projectId];
   refreshModal();
   setTimeout(() => document.getElementById(`agent-task-${projectId}`)?.focus(), 50);
+}
+
+function getDefaultResumeId(projectId) {
+  const entries = agentLogCache[projectId] || [];
+  const runningSessions = getProjectSessions(projectId);
+  const runningResumeIds = new Set(
+    runningSessions.filter(h => h.resumedFrom).map(h => h.resumedFrom)
+  );
+  for (const e of entries) {
+    if (e.claude_session_id && !runningResumeIds.has(e.claude_session_id)) {
+      return e.claude_session_id;
+    }
+  }
+  return null;
+}
+
+function selectResumeSession(projectId, claudeSessionId) {
+  pendingResumeId[projectId] = claudeSessionId || null;
+  refreshModal();
+  setTimeout(() => document.getElementById(`agent-task-${projectId}`)?.focus(), 50);
+}
+
+function sessionPickerHTML(projectId) {
+  const entries = agentLogCache[projectId] || [];
+  // Filter to entries with a claude_session_id
+  const resumable = entries.filter(e => e.claude_session_id);
+  if (resumable.length === 0) return '';
+
+  // Exclude sessions already running in open tabs for this project
+  const runningSessions = getProjectSessions(projectId);
+  const runningResumeIds = new Set(
+    runningSessions
+      .filter(h => h.resumedFrom)
+      .map(h => h.resumedFrom)
+  );
+
+  const availableAll = resumable.filter(e => !runningResumeIds.has(e.claude_session_id));
+  // Deduplicate by claude_session_id (keep first/most recent entry per session)
+  const seen = new Set();
+  const available = availableAll.filter(e => {
+    if (seen.has(e.claude_session_id)) return false;
+    seen.add(e.claude_session_id);
+    return true;
+  });
+  if (available.length === 0) return '';
+
+  const selected = pendingResumeId[projectId] || null;
+
+  const opts = available.slice(0, 8).map(e => {
+    const csid = e.claude_session_id;
+    const isSelected = selected === csid;
+    const task = (e.task || '').substring(0, 60) || 'Session';
+    const time = e.ts_relative || e.ts || '';
+    return `<div class="session-picker-opt ${isSelected ? 'selected' : ''}"
+      onclick="selectResumeSession('${esc(projectId)}','${esc(csid)}')"
+      title="${esc(e.task || '')}">
+      <div class="sp-radio"></div>
+      <div class="sp-label">
+        <div class="sp-task">${esc(task)}</div>
+        <div class="sp-meta">${esc(time)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const freshSelected = !selected;
+  return `<div class="session-picker">
+    <div class="session-picker-label">Session context</div>
+    <div class="session-picker-options">
+      <div class="session-picker-opt ${freshSelected ? 'selected' : ''}"
+        onclick="selectResumeSession('${esc(projectId)}','')">
+        <div class="sp-radio"></div>
+        <div class="sp-label"><div class="sp-task">Fresh session (no prior context)</div></div>
+      </div>
+      ${opts}
+    </div>
+  </div>`;
 }
 
 function closeAgentTab(projectId, sessionId) {
@@ -2406,28 +3016,39 @@ function closeAgentTab(projectId, sessionId) {
 async function dispatchAgent(projectId) {
   const input = document.getElementById(`agent-task-${projectId}`);
   const task = input.value.trim();
-  if (!task) { input.focus(); return; }
+
+  // Check if we're resuming a prior session
+  const resumeId = pendingResumeId[projectId] || null;
+  delete pendingResumeId[projectId];
+
+  // Require a prompt for fresh sessions; resume can go without one
+  if (!task && !resumeId) { input.focus(); return; }
   input.value = '';
 
   // Upload any pasted images and build final task
   const imagePaths = await uploadAgentImages(projectId);
-  const fullTask = buildTaskWithImages(task, imagePaths);
+  const fullTask = buildTaskWithImages(task || 'Continue where we left off.', imagePaths);
   clearAgentImages(projectId);
+
+  const body = { task: fullTask };
+  if (resumeId) body.resume_conversation_id = resumeId;
 
   try {
     const res = await fetch(API_BASE + `/api/project/${projectId}/agent/dispatch`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ task: fullTask })
+      body: JSON.stringify(body)
     });
     const data = await res.json();
     if (!data.ok) { alert(data.error || 'Dispatch failed'); return; }
     const sessionId = data.session_id;
     const pName = (allProjects.find(x => x.id === projectId) || {}).name || projectId;
 
-    agentOutputBuffers[sessionId] = [`> ${task}`];
-    agentStatusCache[sessionId] = { status: 'running', task, projectId, startedAt: new Date().toISOString() };
-    agentHistory.unshift({ projectId, sessionId, projectName: pName, task, status: 'running', startedAt: new Date().toISOString() });
+    const displayTask = task || 'Continue where we left off.';
+    const prefix = resumeId ? `> [resuming prior session] ${displayTask}` : `> ${displayTask}`;
+    agentOutputBuffers[sessionId] = [prefix];
+    agentStatusCache[sessionId] = { status: 'running', task: displayTask, projectId, startedAt: new Date().toISOString() };
+    agentHistory.unshift({ projectId, sessionId, projectName: pName, task: displayTask, status: 'running', startedAt: new Date().toISOString(), resumedFrom: resumeId || null });
     activeAgentTab[projectId] = sessionId;
 
     refreshModal();
@@ -2469,7 +3090,11 @@ function connectAgentStream(projectId, sessionId) {
           }
         }
       } else if (msg.type === 'status') {
-        if (agentStatusCache[sessionId]) agentStatusCache[sessionId].status = msg.status;
+        if (agentStatusCache[sessionId]) {
+          agentStatusCache[sessionId].status = msg.status;
+          if (msg.usage) agentStatusCache[sessionId].usage = msg.usage;
+          if (msg.cost_usd !== undefined) agentStatusCache[sessionId].cost_usd = msg.cost_usd;
+        }
         updateHistoryStatus(sessionId, msg.status);
         es.close();
         delete agentEventSources[sessionId];
@@ -2732,7 +3357,8 @@ function appendAgentLine(sessionId, text) {
             const container = document.getElementById(`plan-file-btn-${sessionId}`);
             if (container && !container.innerHTML.trim()) {
               const fname = s.plan_file.split(/[/\\]/).pop();
-              container.innerHTML = `<button class="btn-plan-file" onclick="openPlanFileViewer('${esc(cached.projectId)}','${esc(sessionId)}')" title="Open ${esc(fname)}">&#128196; ${esc(fname)}</button>`;
+              const label = planFileLabel(cached.task || fname);
+              container.innerHTML = `<button class="btn-plan-file" onclick="openPlanFileViewer('${esc(cached.projectId)}','${esc(sessionId)}')" title="${esc(fname)}">&#128196; ${esc(label)}</button>`;
             }
           }
         }).catch(() => {});
@@ -2765,7 +3391,11 @@ async function sendFollowup(projectId, sessionId) {
       // SSE is still connected and will stream the queued confirmation
       return;
     }
-    if (agentStatusCache[sessionId]) agentStatusCache[sessionId].status = 'running';
+    if (agentStatusCache[sessionId]) {
+      agentStatusCache[sessionId].status = 'running';
+      delete agentStatusCache[sessionId].usage;
+      delete agentStatusCache[sessionId].cost_usd;
+    }
     updateHistoryStatus(sessionId, 'running');
     refreshModal();
     renderAgentConsole();
@@ -2804,7 +3434,7 @@ async function fetchAgentStatus(projectId) {
 
     for (const s of sessions) {
       const sid = s.session_id;
-      agentStatusCache[sid] = { status: s.status, task: s.task, projectId, startedAt: s.started_at, planFile: s.plan_file || '' };
+      agentStatusCache[sid] = { status: s.status, task: s.task, projectId, startedAt: s.started_at, planFile: s.plan_file || '', usage: s.usage || {}, cost_usd: s.cost_usd || 0 };
       if (s.log_lines && s.log_lines.length > 0) {
         agentOutputBuffers[sid] = s.log_lines;
       }
@@ -2847,10 +3477,10 @@ function agentLogPanelHTML(p) {
           ${csid ? `<button class="agent-log-continue-btn" onclick="toggleContinueInput('${esc(p.id)}','${esc(eid)}','${esc(csid)}')">Continue</button>` : ''}
         </div>
         <div class="agent-log-summary">${esc(e.summary || '')}</div>
-        <div class="agent-log-ts">${esc(e.ts_relative || e.ts || '')} &middot; started ${esc(e.started_relative || e.started_at || '')}</div>
+        <div class="agent-log-ts">${esc(e.ts_relative || e.ts || '')} &middot; started ${esc(e.started_relative || e.started_at || '')}${(() => { const u = e.usage || {}; const t = (u.input_tokens||0)+(u.output_tokens||0); return t ? ` &middot; ${formatTokens(t)} tokens` : ''; })()}${e.cost_usd ? ` &middot; <span class="alu-cost">${formatCost(e.cost_usd)}</span>` : ''}</div>
         ${csid ? `<div class="agent-log-session-id">claude -r <code title="Click to copy">${esc(csid)}</code><span class="copy-sid" onclick="navigator.clipboard.writeText('${esc(csid)}');this.textContent='copied!';setTimeout(()=>this.textContent='copy',1200)" title="Copy session ID">copy</span></div>` : ''}
         ${csid ? `<div class="agent-log-continue-input" id="continue-input-${esc(eid)}">
-          <textarea id="continue-msg-${esc(eid)}" rows="2" placeholder="What should the agent continue with?" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){event.preventDefault();dispatchContinue('${esc(p.id)}','${esc(eid)}','${esc(csid)}')}"></textarea>
+          <textarea id="continue-msg-${esc(eid)}" rows="2" placeholder="What should the agent continue with?" onkeydown="handleInputEnter(event,()=>dispatchContinue('${esc(p.id)}','${esc(eid)}','${esc(csid)}'))"></textarea>
           <button class="btn-send" onclick="dispatchContinue('${esc(p.id)}','${esc(eid)}','${esc(csid)}')">Send</button>
         </div>` : ''}
       </div>`;
@@ -2881,6 +3511,10 @@ async function loadAgentLog(projectId) {
   try {
     const res = await fetch(API_BASE + `/api/project/${projectId}/agent/log`);
     agentLogCache[projectId] = await res.json();
+    // Auto-set default resume if not explicitly chosen yet
+    if (!(projectId in pendingResumeId)) {
+      pendingResumeId[projectId] = getDefaultResumeId(projectId);
+    }
     refreshModal();
   } catch(e) {}
 }
@@ -3340,26 +3974,9 @@ async function saveProjectName(projectId, inputEl) {
   } catch(e) {}
 }
 
-function toggleDomainDropdown(e, projectId) {
+async function saveDomainFromMenu(e, projectId, domain) {
   e.stopPropagation();
-  const dd = document.getElementById(`domain-dd-${projectId}`);
-  if (!dd) return;
-  const isOpen = dd.classList.contains('open');
-  // Close all open dropdowns first
-  document.querySelectorAll('.domain-dropdown.open').forEach(d => d.classList.remove('open'));
-  if (!isOpen) {
-    dd.classList.add('open');
-    // Close on outside click
-    const close = (ev) => {
-      if (!dd.contains(ev.target)) { dd.classList.remove('open'); document.removeEventListener('click', close); }
-    };
-    setTimeout(() => document.addEventListener('click', close), 0);
-  }
-}
-
-async function saveDomain(e, projectId, domain) {
-  e.stopPropagation();
-  document.querySelectorAll('.domain-dropdown.open').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.modal-menu-dropdown.open').forEach(d => d.classList.remove('open'));
   const p = allProjects.find(x => x.id === projectId);
   if (p && p.domain === domain) return;
   try {
@@ -3370,6 +3987,44 @@ async function saveDomain(e, projectId, domain) {
     });
     await refreshSilent();
   } catch(e) {}
+}
+
+async function addDomainFromMenu(e, projectId, value) {
+  e.stopPropagation();
+  const name = value.trim();
+  if (!name) return;
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  if (!id) return;
+  try {
+    const res = await fetch(API_BASE + '/api/settings/domains/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ id, label: name })
+    });
+    const data = await res.json();
+    if (!data.ok && data.error !== 'domain already exists') return;
+    await fetchDomains();
+    renderDomainFilters();
+    await saveDomainFromMenu(e, projectId, id);
+  } catch(err) {}
+}
+
+async function setDomainColorFromMenu(e, projectId, domainId, color, bg) {
+  e.stopPropagation();
+  const domain = domainsList.find(d => d.id === domainId);
+  if (!domain) return;
+  domain.color = color;
+  domain.bg = bg;
+  try {
+    await fetch(API_BASE + `/api/settings/domains/${domainId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ color, bg })
+    });
+    document.querySelectorAll('.modal-menu-dropdown.open').forEach(d => d.classList.remove('open'));
+    renderDomainFilters();
+    await refreshSilent();
+  } catch(err) {}
 }
 
 async function saveProjectPath(projectId, inputEl) {
@@ -3543,6 +4198,12 @@ function openPlanViewer(sessionId) {
   focusModal(modalId);
 }
 
+function planFileLabel(task) {
+  if (!task) return 'Plan';
+  const t = task.length > 40 ? task.slice(0, 37) + '...' : task;
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 async function openPlanFileViewer(projectId, sessionId) {
   const modalId = `__planfile_${sessionId}`;
 
@@ -3564,7 +4225,11 @@ async function openPlanFileViewer(projectId, sessionId) {
     return;
   }
 
-  const filename = data.filename || 'Plan';
+  const rawFilename = data.filename || 'Plan';
+  // Use first markdown heading or session task as the display title
+  const cached = agentStatusCache[sessionId];
+  const headingMatch = data.content.match(/^#\s+(.+)/m);
+  const filename = headingMatch ? headingMatch[1].trim() : planFileLabel(cached?.task || rawFilename);
   const lines = data.content.split('\n');
 
   // Render markdown lines with rich formatting
@@ -3619,6 +4284,7 @@ async function openPlanFileViewer(projectId, sessionId) {
 // ── New Project Creation ────────────────────────────────────────────────────
 
 function openNewProjectForm() {
+  newProjDomain = 'general';
   const modalId = '__new_project';
   if (openModals.has(modalId)) {
     const entry = openModals.get(modalId);
@@ -3633,12 +4299,14 @@ function openNewProjectForm() {
   const content = document.createElement('div');
   content.className = 'modal-content';
   content.innerHTML = `
-    <div class="modal-window-controls">
-      <button class="modal-minimize" onclick="minimizeModal('${modalId}')" title="Minimize">&#x2015;</button>
-      <button class="modal-close" onclick="closeModalById('${modalId}')" title="Close">&#10005;</button>
+    <div class="modal-header" style="padding:16px 24px 12px 28px;border-radius:6px 6px 0 0">
+      <div class="modal-window-controls">
+        <button class="modal-minimize" onclick="minimizeModal('${modalId}')" title="Minimize">&#x2015;</button>
+        <button class="modal-close" onclick="closeModalById('${modalId}')" title="Close">&#10005;</button>
+      </div>
+      <h2 style="margin:0;font-size:18px;font-weight:700;color:var(--text)">Create New Project</h2>
     </div>
     <div class="new-project-form">
-      <h2>Create New Project</h2>
       <div class="form-group">
         <label>Name</label>
         <input type="text" id="new-proj-name" placeholder="My Project" oninput="autoSlug()">
@@ -3650,12 +4318,34 @@ function openNewProjectForm() {
       </div>
       <div class="form-group">
         <label>Domain</label>
-        <select id="new-proj-domain" class="priority-select" style="width:100%;padding:8px 12px;font-size:13px">
-          <option value="general">General</option>
-          <option value="trading">Trading</option>
-          <option value="infra">Infra</option>
-          <option value="hobby">Hobby</option>
-        </select>
+        <div class="new-proj-domain-wrap">
+          <div class="new-proj-domain-trigger" onclick="toggleNewProjDomain(event)">
+            ${(() => { const cfg = getDomainConfig(newProjDomain); return `<span class="modal-menu-sub-dot" style="background:${cfg.color}"></span> <span id="new-proj-domain-label">${esc(cfg.label||newProjDomain)}</span>`; })()}
+            <span style="margin-left:auto;color:var(--text-faint);font-size:11px">&#x25BE;</span>
+          </div>
+          <div class="new-proj-domain-dd" id="new-proj-domain-dd">
+            ${domainsList.map(d => {
+              const cfg = getDomainConfig(d.id);
+              return `<button class="new-proj-domain-item${newProjDomain===d.id?' active':''}" onclick="selectNewProjDomain(event,'${esc(d.id)}')">
+              <span class="modal-menu-sub-dot" style="background:${cfg.color}"></span> ${esc(d.label||d.id)}</button>`;
+            }).join('')}
+            <div style="border-top:1px solid var(--border);padding:6px 8px">
+              <div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Color</div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap">
+                ${COLOR_PRESETS.map(c =>
+                  `<button style="width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:${c.bg};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"
+                    title="${c.label}"
+                    onclick="setNewProjDomainColor(event,'${c.color}','${c.bg}')"><span style="width:8px;height:8px;border-radius:2px;background:${c.color}"></span></button>`
+                ).join('')}
+              </div>
+            </div>
+            <div style="border-top:1px solid var(--border);padding:4px">
+              <input type="text" placeholder="New domain..." style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 8px;border-radius:4px;outline:none;box-sizing:border-box"
+                onclick="event.stopPropagation()"
+                onkeydown="if(event.key==='Enter'){event.stopPropagation();addNewProjDomainEntry(this.value);this.value=''}">
+            </div>
+          </div>
+        </div>
       </div>
       <div class="form-group">
         <label>Project Path (optional)</label>
@@ -3805,10 +4495,107 @@ async function createFolderInBrowser() {
   } catch(e) { alert('Failed to create folder: ' + e.message); }
 }
 
+// ── New project domain picker ────────────────────────────────────────────────
+
+function toggleNewProjDomain(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('new-proj-domain-dd');
+  if (!dd) return;
+  const isOpen = dd.classList.contains('open');
+  document.querySelectorAll('.new-proj-domain-dd.open').forEach(d => d.classList.remove('open'));
+  if (!isOpen) {
+    dd.classList.add('open');
+    const close = (ev) => {
+      if (!dd.contains(ev.target)) { dd.classList.remove('open'); document.removeEventListener('click', close); }
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  }
+}
+
+function selectNewProjDomain(e, domainId) {
+  e.stopPropagation();
+  newProjDomain = domainId;
+  document.querySelectorAll('.new-proj-domain-dd.open').forEach(d => d.classList.remove('open'));
+  refreshNewProjDomainTrigger();
+}
+
+function refreshNewProjDomainTrigger() {
+  const wrap = document.querySelector('.new-proj-domain-wrap');
+  if (!wrap) return;
+  const cfg = getDomainConfig(newProjDomain);
+  const trigger = wrap.querySelector('.new-proj-domain-trigger');
+  if (trigger) {
+    trigger.innerHTML = `<span class="modal-menu-sub-dot" style="background:${cfg.color}"></span> <span id="new-proj-domain-label">${esc(cfg.label||newProjDomain)}</span><span style="margin-left:auto;color:var(--text-faint);font-size:11px">&#x25BE;</span>`;
+  }
+  // Rebuild dropdown items
+  const dd = document.getElementById('new-proj-domain-dd');
+  if (!dd) return;
+  const itemsHTML = domainsList.map(d => {
+    const c = getDomainConfig(d.id);
+    return `<button class="new-proj-domain-item${newProjDomain===d.id?' active':''}" onclick="selectNewProjDomain(event,'${esc(d.id)}')">
+    <span class="modal-menu-sub-dot" style="background:${c.color}"></span> ${esc(d.label||d.id)}</button>`;
+  }).join('');
+  const colorHTML = `<div style="border-top:1px solid var(--border);padding:6px 8px">
+    <div style="font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Color</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      ${COLOR_PRESETS.map(c =>
+        `<button style="width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:${c.bg};cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center"
+          title="${c.label}"
+          onclick="setNewProjDomainColor(event,'${c.color}','${c.bg}')"><span style="width:8px;height:8px;border-radius:2px;background:${c.color}"></span></button>`
+      ).join('')}
+    </div>
+  </div>`;
+  const inputHTML = `<div style="border-top:1px solid var(--border);padding:4px">
+    <input type="text" placeholder="New domain..." style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 8px;border-radius:4px;outline:none;box-sizing:border-box"
+      onclick="event.stopPropagation()"
+      onkeydown="if(event.key==='Enter'){event.stopPropagation();addNewProjDomainEntry(this.value);this.value=''}">
+  </div>`;
+  dd.innerHTML = itemsHTML + colorHTML + inputHTML;
+}
+
+async function addNewProjDomainEntry(value) {
+  const name = value.trim();
+  if (!name) return;
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  if (!id) return;
+  try {
+    const res = await fetch(API_BASE + '/api/settings/domains/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ id, label: name })
+    });
+    const data = await res.json();
+    if (!data.ok && data.error !== 'domain already exists') return;
+    await fetchDomains();
+    renderDomainFilters();
+    newProjDomain = id;
+    refreshNewProjDomainTrigger();
+  } catch(err) {}
+}
+
+async function setNewProjDomainColor(e, color, bg) {
+  e.stopPropagation();
+  const domainId = newProjDomain;
+  const domain = domainsList.find(d => d.id === domainId);
+  if (!domain) return;
+  domain.color = color;
+  domain.bg = bg;
+  try {
+    await fetch(API_BASE + `/api/settings/domains/${domainId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ color, bg })
+    });
+    renderDomainFilters();
+    refreshNewProjDomainTrigger();
+    await refreshSilent();
+  } catch(err) {}
+}
+
 async function createProject() {
   const id = document.getElementById('new-proj-id').value.trim();
   const name = document.getElementById('new-proj-name').value.trim();
-  const domain = document.getElementById('new-proj-domain').value;
+  const domain = newProjDomain;
   const path = document.getElementById('new-proj-path').value.trim();
   if (!id || !name) { alert('Name and ID are required'); return; }
   if (allProjects.find(p => p.id === id)) { alert('A project with this ID already exists'); return; }
@@ -3820,6 +4607,7 @@ async function createProject() {
     });
     const data = await res.json();
     if (!data.ok) { alert(data.error || 'Failed to create project'); return; }
+    newProjDomain = 'general';
     closeModalById('__new_project');
     await refreshSilent();
     openProjectModal(id);
@@ -3837,11 +4625,13 @@ function startRefresh() {
 }
 
 document.querySelectorAll('.filter-btn').forEach(b => b.addEventListener('click', () => setFilter(b.dataset.filter)));
+fetchDomains().then(() => renderDomainFilters());
 fetchProjects().then(async () => {
   // Restore any running/completed agent sessions into the console
   for (const p of allProjects) {
     if (p.project_path) await fetchAgentStatus(p.id);
   }
+  fetchGlobalUsage();
 });
 startRefresh();
 
