@@ -1,5 +1,19 @@
 # Mission Control — Changelog
 
+## [2026-03-15c] — User-configurable modal header color
+
+### Modal accent color
+- Modal header left accent bar is now user-configurable per project (decoupled from status)
+- "Change Color" submenu added to three-dot menu between "Change Status" and "Change Domain"
+- Shows 6 color swatches (Blue, Purple, Green, Amber, Red, Gray) using existing `COLOR_PRESETS`
+- Current color highlighted with thicker border
+- Color saved as `modal_color: {color, bg}` on project JSON
+- Default: Blue (`var(--accent)`) for projects without a chosen color
+- CSS: Replaced 4 `.modal-header.status-*::before` rules with single `var(--modal-accent)` custom property
+- Tile cards in grid also use chosen color via `--card-accent` inline override (falls back to status color)
+- Status pill text in modal unchanged — still shows status with correct styling
+- Function: `setProjectColor(projectId, color, bg)`
+
 ## [2026-03-15b] — Token tracking, live timer, enter key mode, UX refinements
 
 ### Three-dot modal menu
