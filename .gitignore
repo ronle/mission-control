@@ -20,6 +20,11 @@ data/uploads/*
 !data/uploads/.gitkeep
 config.json
 
+# Build artifacts
+build/
+dist/
+installer_output/
+
 # IDE
 .vscode/
 .idea/

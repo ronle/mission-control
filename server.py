@@ -11,8 +11,26 @@ from pathlib import Path
 from datetime import datetime, timezone
 from flask import Flask, jsonify, send_from_directory, request, send_file, abort, Response
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, 'static')
+
+def _resolve_dirs():
+    """Resolve application and data directories.
+
+    Frozen (PyInstaller): assets from sys._MEIPASS, user data in %APPDATA%/MissionControl.
+    Dev mode: both point to the repo root (backward-compatible).
+    """
+    if getattr(sys, 'frozen', False):
+        app_dir = Path(sys._MEIPASS)
+        data_root = Path(os.environ.get(
+            'MC_DATA_DIR',
+            str(Path(os.environ.get('APPDATA', str(Path.home()))) / 'MissionControl')
+        ))
+    else:
+        app_dir = Path(__file__).parent
+        data_root = Path(os.environ['MC_DATA_DIR']) if os.environ.get('MC_DATA_DIR') else app_dir
+    return app_dir, data_root
+
+_APP_DIR, _DATA_ROOT = _resolve_dirs()
+STATIC_DIR = str(_APP_DIR / 'static')
 _POPEN_FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
 _STARTUPINFO = None
 if sys.platform == 'win32':
@@ -58,13 +76,13 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB max upload
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
-CONFIG_PATH = Path(BASE_DIR) / 'config.json'
+CONFIG_PATH = _DATA_ROOT / 'config.json'
 
 def _load_config():
     """Load config.json, creating with defaults if it doesn't exist."""
     defaults = {
         'port': 5199,
-        'shared_rules_path': str(Path(BASE_DIR) / 'data' / 'SHARED_RULES.md'),
+        'shared_rules_path': str(_DATA_ROOT / 'data' / 'SHARED_RULES.md'),
         'projects_base': str(Path.home()),
         'agent_model': '',
         'agent_max_turns': 0,
@@ -108,15 +126,15 @@ def add_cors_headers(response):
         response.status_code = 204
     return response
 
-DATA_DIR = Path(BASE_DIR) / 'data' / 'projects'
+DATA_DIR = _DATA_ROOT / 'data' / 'projects'
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-UPLOADS_DIR = Path(BASE_DIR) / 'data' / 'uploads'
+UPLOADS_DIR = _DATA_ROOT / 'data' / 'uploads'
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 SHARED_RULES_PATH = Path(CONFIG.get('shared_rules_path', ''))
 PROJECTS_BASE = Path(CONFIG.get('projects_base', str(Path.home())))
-SETTINGS_PATH = Path(BASE_DIR) / 'data' / 'settings.json'
+SETTINGS_PATH = _DATA_ROOT / 'data' / 'settings.json'
 
 DEFAULT_DOMAINS = [
     {'id': 'general', 'label': 'General', 'color': 'var(--text-dim)', 'bg': 'var(--surface3)'},

@@ -15,15 +15,47 @@ Mission Control gives you a centralized dashboard to:
 - **View agent plans** in a dedicated wide-format viewer
 - **Share baseline rules** across all projects (SHARED_RULES.md)
 
-## Prerequisites
+## Quick Start (Windows)
+
+1. **Download** `MissionControl-Windows.zip` from [Releases](https://github.com/ronle/mission-control/releases/latest)
+2. **Unzip** anywhere (e.g. your Desktop or Documents)
+3. **Double-click** `MissionControl.exe`
+
+That's it. A native window opens with the full dashboard. On first launch the app will attempt to install the Claude CLI automatically if it's not already on your system.
+
+The web interface is also accessible at `http://localhost:5199` while the app is running.
+
+## Prerequisites (from source only)
+
+If you prefer running from source instead of the prebuilt exe:
 
 - **Python 3.9+** — [Download](https://www.python.org/downloads/)
 - **Claude CLI** — [Installation guide](https://docs.anthropic.com/en/docs/claude-code/getting-started)
-- **Node.js 18+** (optional, for Tauri desktop app) — [Download](https://nodejs.org/)
 
-## Quick Start
+## Running from Source
 
-### Option A: Automated Setup
+### Option A: Desktop Window
+
+```bash
+git clone https://github.com/ronle/mission-control.git
+cd mission-control
+pip install -r requirements.txt
+python app.py
+```
+
+Opens a native window with the dashboard. Flask server runs in the background.
+
+### Option B: Browser Only
+
+```bash
+git clone https://github.com/ronle/mission-control.git
+cd mission-control
+pip install flask
+python server.py
+# Open http://localhost:5199 in your browser
+```
+
+### Option C: Automated Setup
 
 **Windows:**
 ```
@@ -34,33 +66,6 @@ install.bat
 ```bash
 chmod +x install.sh
 ./install.sh
-```
-
-The installer checks prerequisites, installs dependencies, and creates launcher scripts.
-
-### Option B: Manual Setup
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/ronle/mission-control.git
-cd mission-control
-
-# 2. Install Python dependencies
-pip install -r requirements.txt
-
-# 3. Start the server
-python server.py
-
-# 4. Open in your browser
-# Navigate to http://localhost:5199
-```
-
-### Option C: Tauri Desktop App
-
-```bash
-# Requires Node.js and Rust toolchain
-npm install
-npm run tauri dev
 ```
 
 ## Configuration
@@ -121,21 +126,23 @@ You can also set the port via environment variable: `MC_PORT=8080 python server.
 
 ```
 mission-control/
+  app.py                 Desktop entry point (pywebview + Flask)
   server.py              Flask backend (API + static serving)
   static/
     index.html           Single-page app (HTML + CSS + JS, no build step)
   data/
     projects/            Project JSON files (auto-created)
     uploads/             File attachments
-  src-tauri/             Tauri desktop app wrapper (optional)
   config.json            User configuration (auto-created, gitignored)
+  build.spec             PyInstaller build spec
+  build.bat              Build automation script
 ```
 
 - **Backend**: Python Flask server on configurable port (default 5199)
 - **Frontend**: Vanilla HTML/CSS/JS single-page app (no framework, no build step)
 - **Data**: JSON files on disk (no database required)
 - **Agent**: Spawns `claude` CLI as subprocess with streaming JSON output
-- **Desktop**: Optional Tauri wrapper for native window experience
+- **Desktop**: Native window via pywebview (WebView2); prebuilt exe available in Releases
 
 ## Contributing
 

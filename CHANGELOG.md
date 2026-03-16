@@ -1,5 +1,26 @@
 # Mission Control — Changelog
 
+## [2026-03-15d] — Package as standalone Windows .exe
+
+### Desktop mode (app.py)
+- New `app.py` entry point: starts Flask in daemon thread, opens native pywebview window
+- First-run creates `%APPDATA%\MissionControl\data\{projects,uploads}\` and `config.json`
+- Auto-installs Claude CLI if missing (via npm, or winget→Node.js→npm fallback)
+- Shows non-blocking alert in webview if CLI install fails (app still usable)
+- Web interface remains accessible at `http://localhost:5199` while native window is open
+
+### Dual-directory system (server.py)
+- Replaced `BASE_DIR` with `_APP_DIR` (bundled assets) and `_DATA_ROOT` (user data)
+- Frozen mode: `_APP_DIR = sys._MEIPASS`, `_DATA_ROOT = %APPDATA%\MissionControl`
+- Dev mode: both point to repo root — fully backward-compatible
+- `MC_DATA_DIR` env var overrides data root for custom deployments
+
+### Build & packaging
+- `build.spec` — PyInstaller `--onedir` spec (bundles server.py + static/index.html, console=False)
+- `installer.iss` — Inno Setup script (per-user install, Start Menu + Desktop shortcuts, post-install launch)
+- `build.bat` — Automated build: pip install deps → pyinstaller → prints Inno Setup instructions
+- `requirements.txt` — Added `pywebview>=5.0`
+
 ## [2026-03-15c] — User-configurable modal header color
 
 ### Modal accent color
